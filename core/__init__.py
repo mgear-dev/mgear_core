@@ -41,8 +41,6 @@ def aboutMgear(*args):
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
     OR OTHER DEALINGS IN THE SOFTWARE.
 
-    Authors:     Jeremie Passerin, Miquel Campos
-
     """.format(version)
     pm.confirmDialog(title='About mGear', message=note, button=["OK"],
                      defaultButton='OK', cancelButton='OK', dismissString='OK')
