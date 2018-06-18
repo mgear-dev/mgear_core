@@ -6,8 +6,11 @@
 import os
 import traceback
 import maya.OpenMayaUI as omui
+import pymel.core as pm
 
 from mgear.vendor.Qt import QtWidgets, QtCompat
+
+UI_EXT = "ui"
 
 #################
 # Old qt importer
@@ -82,6 +85,33 @@ compileUi = qt_import(shi=True, cui=True)[-1]
 #############################################
 # helper Maya pyQt functions
 #############################################
+
+
+def ui2py(filePath=None, *args):
+    """Convert qtDesigner .ui files to .py"""
+
+    if not filePath:
+        startDir = pm.workspace(q=True, rootDirectory=True)
+        filePath = pm.fileDialog2(dialogStyle=2,
+                                  fileMode=1,
+                                  startingDirectory=startDir,
+                                  fileFilter='PyQt Designer (*%s)' % UI_EXT,
+                                  okc="Compile to .py")
+        if not filePath:
+            return False
+        filePath = filePath[0]
+    if not filePath:
+        return False
+
+    if not filePath.endswith(UI_EXT):
+        filePath += UI_EXT
+    compiledFilePath = filePath[:-2] + "py"
+    pyfile = open(compiledFilePath, 'w')
+    compileUi(filePath, pyfile, False, 4, False)
+    pyfile.close()
+
+    info = "PyQt Designer file compiled to .py in: "
+    pm.displayInfo(info + compiledFilePath)
 
 
 def maya_main_window():
