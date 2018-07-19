@@ -216,11 +216,12 @@ def exportSkinPack(packPath=None, objs=None, *args):
         "rootPath": []
     }
 
-    startDir = pm.workspace(q=True, rootDirectory=True)
-    packPath = pm.fileDialog2(dialogStyle=2,
-                              fileMode=0,
-                              startingDirectory=startDir,
-                              fileFilter='mGear skinPack (*%s)' % PACK_EXT)
+    if packPath is None:
+        startDir = pm.workspace(q=True, rootDirectory=True)
+        packPath = pm.fileDialog2(dialogStyle=2,
+                                  fileMode=0,
+                                  startingDirectory=startDir,
+                                  fileFilter='mGear skinPack (*%s)' % PACK_EXT)
     if not packPath:
         return
     packPath = packPath[0]
