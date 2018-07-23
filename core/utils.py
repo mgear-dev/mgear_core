@@ -3,6 +3,7 @@
 
 import os
 import sys
+import timeit
 from functools import wraps
 
 from maya import cmds
@@ -184,5 +185,26 @@ def one_undo(func):
 
         finally:
             cmds.undoInfo(closeChunk=True)
+
+    return wrap
+
+
+def timeFunc(func):
+    """Use as a property to time any desired function
+    """
+    @wraps(func)
+    def wrap(*args, **kwargs):
+        start = timeit.default_timer()
+        try:
+            return func(*args, **kwargs)
+
+        except Exception as e:
+            raise e
+
+        finally:
+            end = timeit.default_timer()
+            timeConsumed = end - start
+            print "{} time elapsed running {}".format(timeConsumed,
+                                                      func.func_name)
 
     return wrap
