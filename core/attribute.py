@@ -607,6 +607,7 @@ class ParamDef(object):
         self.scriptName = scriptName
         self.value = None
         self.valueType = None
+        self.param_dict = {}
 
     def create(self, node):
         """Add a parameter to property using the parameter definition.
@@ -628,6 +629,36 @@ class ParamDef(object):
                                  self.writable)
 
         return node, attr_name
+
+    def get_as_dict(self):
+
+        self.param_dict["scriptName"] = self.scriptName
+        self.param_dict["valueType"] = self.valueType
+        self.param_dict["value"] = self.value
+        self.param_dict["niceName"] = self.niceName
+        self.param_dict["shortName"] = self.shortName
+        self.param_dict["minimum"] = self.minimum
+        self.param_dict["maximum"] = self.maximum
+        self.param_dict["keyable"] = self.keyable
+        self.param_dict["readable"] = self.readable
+        self.param_dict["storable"] = self.storable
+        self.param_dict["writable"] = self.writable
+
+        return self.param_dict
+
+    def set_from_dict(self, param_dict):
+
+        self.scriptName = param_dict["scriptName"]
+        self.valueType = param_dict["valueType"]
+        self.value = param_dict["value"]
+        self.niceName = param_dict["niceName"]
+        self.shortName = param_dict["shortName"]
+        self.minimum = param_dict["minimum"]
+        self.maximum = param_dict["maximum"]
+        self.keyable = param_dict["keyable"]
+        self.readable = param_dict["readable"]
+        self.storable = param_dict["storable"]
+        self.writable = param_dict["writable"]
 
 
 class ParamDef2(ParamDef):
@@ -676,6 +707,7 @@ class ParamDef2(ParamDef):
         self.readable = readable
         self.storable = storable
         self.writable = writable
+        self.param_dict = {}
 
 
 class FCurveParamDef(ParamDef):
@@ -701,6 +733,7 @@ class FCurveParamDef(ParamDef):
         self.extrapolation = extrapolation
         self.value = None
         self.valueType = None
+        self.param_dict = {}
 
     def create(self, node):
         """Add a parameter to property using the parameter definition.
@@ -723,6 +756,26 @@ class FCurveParamDef(ParamDef):
 
         return node, attr_name
 
+    def get_as_dict(self):
+
+        self.param_dict["scriptName"] = self.scriptName
+        self.param_dict["keys"] = self.keys
+        self.param_dict["interpolation"] = self.interpolation
+        self.param_dict["extrapolation"] = self.extrapolation
+        self.param_dict["value"] = self.value
+        self.param_dict["valueType"] = self.valueType
+
+        return self.param_dict
+
+    def set_from_dict(self, param_dict):
+
+        self.scriptName = param_dict["scriptName"]
+        self.keys = param_dict["keys"]
+        self.interpolation = param_dict["interpolation"]
+        self.extrapolation = param_dict["extrapolation"]
+        self.value = param_dict["value"]
+        self.valueType = param_dict["valueType"]
+
 
 class colorParamDef(ParamDef):
     """Create a Color parameter definition.
@@ -738,6 +791,7 @@ class colorParamDef(ParamDef):
 
         self.scriptName = scriptName
         self.value = value
+        self.param_dict = {}
 
     def create(self, node):
         """Add a parameter to property using the parameter definition.
@@ -749,6 +803,18 @@ class colorParamDef(ParamDef):
         attr_name = addColorAttribute(node, self.scriptName, value=self.value)
 
         return node, attr_name
+
+    def get_as_dict(self):
+
+        self.param_dict["scriptName"] = self.scriptName
+        self.param_dict["value"] = self.value
+
+        return self.param_dict
+
+    def set_from_dict(self, param_dict):
+
+        self.scriptName = param_dict["scriptName"]
+        self.value = param_dict["value"]
 
 
 class enumParamDef(ParamDef):
@@ -767,6 +833,7 @@ class enumParamDef(ParamDef):
         self.value = value
         self.enum = enum
         self.valueType = None
+        self.param_dict = {}
 
     def create(self, node):
         """Add a parameter to property using the parameter definition.
@@ -779,6 +846,22 @@ class enumParamDef(ParamDef):
             node, self.scriptName, enum=self.enum, value=self.value)
 
         return node, attr_name
+
+    def get_as_dict(self):
+
+        self.param_dict["scriptName"] = self.scriptName
+        self.param_dict["value"] = self.value
+        self.param_dict["enum"] = self.enum
+        self.param_dict["valueType"] = self.valueType
+
+        return self.param_dict
+
+    def set_from_dict(self, param_dict):
+
+        self.scriptName = param_dict["scriptName"]
+        self.value = param_dict["value"]
+        self.enum = param_dict["enum"]
+        self.valueType = param_dict["valueType"]
 
 
 ##########################################################
