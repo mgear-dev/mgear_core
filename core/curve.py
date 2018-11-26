@@ -393,8 +393,10 @@ def create_curve_from_data(data,
 
     Args:
         data (TYPE): Description
-        replaceShape (bool, optional): Description
-        rebuildHierarchy (bool, optional): Description
+        replaceShape (bool, optional): If True, will only replace the shape on
+            existing objects
+        rebuildHierarchy (bool, optional): If True, will regenerate the
+            hierarchy
     """
 
     for crv in data["curves_names"]:
