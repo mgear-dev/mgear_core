@@ -321,11 +321,22 @@ def set_color(node, color):
 # Curves IO ==============================
 # ========================================
 
-def collect_curve_shapes(crv):
+def collect_curve_shapes(crv, rplStr=["", ""]):
+    """Collect curve shapes data
+
+    Args:
+        crv (dagNode): Curve object to collect the curve shapes data
+        rplStr (list, optional): String to replace in names. This allow to
+            change the curve names before store it.
+            [old Name to replace, new name to set]
+
+    Returns:
+        dict, list: Curve shapes dictionary and curve shapes names
+    """
     shapes_names = []
     shapesDict = {}
     for shape in crv.getShapes():
-        shapes_names.append(shape.name())
+        shapes_names.append(shape.name().replace(rplStr[0], rplStr[1]))
         c_form = shape.form()
         degree = shape.degree()
         form = c_form.key
@@ -339,7 +350,7 @@ def collect_curve_shapes(crv):
     return shapesDict, shapes_names
 
 
-def collect_curve_data(objs=None):
+def collect_curve_data(objs=None, rplStr=["", ""]):
     """Generate a dictionary descriving the curve data
 
     Suport multiple objects
@@ -348,6 +359,9 @@ def collect_curve_data(objs=None):
         objs (dagNode, optional): Curve object to store
         collect_trans (bool, optional): if false will skip the transformation
             matrix
+        rplStr (list, optional): String to replace in names. This allow to
+            change the curve names before store it.
+            [old Name to replace, new name to set]
 
     Returns:
         dict: Curves data
@@ -362,9 +376,10 @@ def collect_curve_data(objs=None):
     curves_dict["curves_names"] = []
 
     for x in objs:
-        curves_dict["curves_names"].append(x.name())
+        crv_name = x.name().replace(rplStr[0], rplStr[1])
+        curves_dict["curves_names"].append(crv_name)
         if x.getParent():
-            crv_parent = x.getParent().name()
+            crv_parent = x.getParent().name().replace(rplStr[0], rplStr[1])
         else:
             crv_parent = None
 
@@ -376,17 +391,18 @@ def collect_curve_data(objs=None):
                      "crv_transform": crv_transform,
                      "crv_color": get_color(x)}
 
-        shps, shps_n = collect_curve_shapes(x)
+        shps, shps_n = collect_curve_shapes(x, rplStr)
         curveDict["shapes"] = shps
         curveDict["shapes_names"] = shps_n
-        curves_dict[x.name()] = curveDict
+        curves_dict[crv_name] = curveDict
 
     return curves_dict
 
 
 def create_curve_from_data(data,
                            replaceShape=False,
-                           rebuildHierarchy=False):
+                           rebuildHierarchy=False,
+                           rplStr=["", ""]):
     """Build the curves from a given curve data dict
 
     Hierarchy rebuild after all curves are build to avoid lost parents
@@ -406,11 +422,12 @@ def create_curve_from_data(data,
         shp_dict = crv_dict["shapes"]
         color = crv_dict["crv_color"]
         if replaceShape:
-            first_shape = pm.ls(crv)
+            first_shape = pm.ls(crv.replace(rplStr[0], rplStr[1]))
             if not first_shape:
                 pm.displayWarning("Couldn't find: {}. Shape will be "
                                   "skipped, since there is nothing to "
-                                  "replace".format(crv))
+                                  "replace".format(crv.replace(rplStr[0],
+                                                               rplStr[1])))
                 continue
         else:
             first_shape = None
@@ -431,7 +448,8 @@ def create_curve_from_data(data,
             else:
                 close = False
             # we dont use replace in order to support multiple shapes
-            obj = pm.curve(name=sh.replace("Shape", ""),
+            nsh = sh.replace(rplStr[0], rplStr[1])
+            obj = pm.curve(name=nsh.replace("Shape", ""),
                            point=points,
                            periodic=close,
                            degree=degree,
@@ -453,10 +471,11 @@ def create_curve_from_data(data,
             crv_dict = data[crv]
             crv_parent = crv_dict["crv_parent"]
             if crv_parent:
-                pm.parent(crv, crv_parent)
+                pm.parent(crv.replace(rplStr[0], rplStr[1]),
+                          crv_parent.replace(rplStr[0], rplStr[1]))
 
 
-def update_curve_from_data(data):
+def update_curve_from_data(data, rplStr=["", ""]):
     """update the curves from a given curve data dict
 
     Args:
@@ -468,11 +487,12 @@ def update_curve_from_data(data):
 
         shp_dict = crv_dict["shapes"]
         color = crv_dict["crv_color"]
-        first_shape = pm.ls(crv)
+        first_shape = pm.ls(crv.replace(rplStr[0], rplStr[1]))
         if not first_shape:
             pm.displayWarning("Couldn't find: {}. Shape will be "
                               "skipped, since there is nothing to "
-                              "replace".format(crv))
+                              "replace".format(crv.replace(rplStr[0],
+                                                           rplStr[1])))
             continue
 
         if first_shape:
@@ -491,7 +511,7 @@ def update_curve_from_data(data):
                 close = False
             # we dont use replace in order to support multiple shapes
             obj = pm.curve(replace=False,
-                           name=sh,
+                           name=sh.replace(rplStr[0], rplStr[1]),
                            point=points,
                            periodic=close,
                            degree=degree,
@@ -559,12 +579,14 @@ def _curve_from_file(filePath=None):
 
 def import_curve(filePath=None,
                  replaceShape=False,
-                 rebuildHierarchy=False):
+                 rebuildHierarchy=False,
+                 rplStr=["", ""]):
     create_curve_from_data(_curve_from_file(filePath),
                            replaceShape,
-                           rebuildHierarchy)
+                           rebuildHierarchy,
+                           rplStr)
 
 
-def update_curve_from_file(filePath=None):
+def update_curve_from_file(filePath=None, rplStr=["", ""]):
     # update a curve data from json file
-    update_curve_from_data(_curve_from_file(filePath))
+    update_curve_from_data(_curve_from_file(filePath), rplStr)
