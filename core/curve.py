@@ -399,6 +399,88 @@ def collect_curve_data(objs=None, rplStr=["", ""]):
     return curves_dict
 
 
+def crv_parenting(data, crv, rplStr=["", ""]):
+    """Parent the new created curves
+
+    Args:
+        data (dict): serialized curve data
+        crv (str): name of the curve to parent
+        rplStr (list, optional): String to replace in names. This allow to
+            change the curve names before store it.
+            [old Name to replace, new name to set]
+    """
+    crv_dict = data[crv]
+    crv_parent = crv_dict["crv_parent"]
+    if crv_parent:
+        pm.parent(crv.replace(rplStr[0], rplStr[1]),
+                  crv_parent)
+
+
+def create_curve_from_data_by_name(crv,
+                                   data,
+                                   replaceShape=False,
+                                   rebuildHierarchy=False,
+                                   rplStr=["", ""]):
+    """Build one curve from a given curve data dict
+
+    Args:
+        crv (str): name of the crv to create
+        data (dict): serialized curve data
+        replaceShape (bool, optional): If True, will replace the shape on
+            existing objects
+        rebuildHierarchy (bool, optional): If True, will regenerate the
+            hierarchy
+        rplStr (list, optional): String to replace in names. This allow to
+            change the curve names before store it.
+            [old Name to replace, new name to set]
+    """
+    crv_dict = data[crv]
+
+    crv_transform = crv_dict["crv_transform"]
+    shp_dict = crv_dict["shapes"]
+    color = crv_dict["crv_color"]
+    if replaceShape:
+        first_shape = pm.ls(crv.replace(rplStr[0], rplStr[1]))
+
+    else:
+        first_shape = None
+
+    if first_shape:
+        first_shape = first_shape[0]
+        # clean old shapes
+        pm.delete(first_shape.listRelatives(shapes=True))
+
+    for sh in crv_dict["shapes_names"]:
+        points = shp_dict[sh]["points"]
+        form = shp_dict[sh]["form"]
+        degree = shp_dict[sh]["degree"]
+        knots = range(len(points) + degree - 1)
+        if form != "open":
+            close = True
+        else:
+            close = False
+        # we dont use replace in order to support multiple shapes
+        nsh = sh.replace(rplStr[0], rplStr[1])
+        obj = pm.curve(name=nsh.replace("Shape", ""),
+                       point=points,
+                       periodic=close,
+                       degree=degree,
+                       knot=knots)
+        set_color(obj, color)
+
+        # handle multiple shapes in the same transform
+        if not first_shape:
+            first_shape = obj
+            first_shape.setTransformation(crv_transform)
+        else:
+            for extra_shp in obj.listRelatives(shapes=True):
+                first_shape.addChild(extra_shp, add=True, shape=True)
+                pm.delete(obj)
+
+    if rebuildHierarchy:
+        crv_parenting(data, crv, rplStr)
+
+
 def create_curve_from_data(data,
                            replaceShape=False,
                            rebuildHierarchy=False,
@@ -408,78 +490,31 @@ def create_curve_from_data(data,
     Hierarchy rebuild after all curves are build to avoid lost parents
 
     Args:
-        data (TYPE): Description
-        replaceShape (bool, optional): If True, will only replace the shape on
+        data (dict): serialized curve data
+        replaceShape (bool, optional): If True, will replace the shape on
             existing objects
         rebuildHierarchy (bool, optional): If True, will regenerate the
             hierarchy
     """
 
     for crv in data["curves_names"]:
-        crv_dict = data[crv]
-
-        crv_transform = crv_dict["crv_transform"]
-        shp_dict = crv_dict["shapes"]
-        color = crv_dict["crv_color"]
-        if replaceShape:
-            first_shape = pm.ls(crv.replace(rplStr[0], rplStr[1]))
-            if not first_shape:
-                pm.displayWarning("Couldn't find: {}. Shape will be "
-                                  "skipped, since there is nothing to "
-                                  "replace".format(crv.replace(rplStr[0],
-                                                               rplStr[1])))
-                continue
-        else:
-            first_shape = None
-
-        if first_shape:
-            first_shape = first_shape[0]
-            # clean old shapes
-            pm.delete(first_shape.listRelatives(shapes=True))
-
-        for sh in crv_dict["shapes_names"]:
-            points = shp_dict[sh]["points"]
-            form = shp_dict[sh]["form"]
-            degree = shp_dict[sh]["degree"]
-            knots = range(len(points) + degree - 1)
-            if form != "open":
-                close = True
-                # points = points[:-degree]
-            else:
-                close = False
-            # we dont use replace in order to support multiple shapes
-            nsh = sh.replace(rplStr[0], rplStr[1])
-            obj = pm.curve(name=nsh.replace("Shape", ""),
-                           point=points,
-                           periodic=close,
-                           degree=degree,
-                           knot=knots)
-            set_color(obj, color)
-
-            # handle multiple shapes in the same transform
-            if not first_shape:
-                first_shape = obj
-                first_shape.setTransformation(crv_transform)
-            else:
-                for extra_shp in obj.listRelatives(shapes=True):
-                    first_shape.addChild(extra_shp, add=True, shape=True)
-                    pm.delete(obj)
+        create_curve_from_data_by_name(crv,
+                                       data,
+                                       replaceShape,
+                                       rebuildHierarchy=False,
+                                       rplStr=rplStr)
 
     # parenting
     if rebuildHierarchy:
         for crv in data["curves_names"]:
-            crv_dict = data[crv]
-            crv_parent = crv_dict["crv_parent"]
-            if crv_parent:
-                pm.parent(crv.replace(rplStr[0], rplStr[1]),
-                          crv_parent.replace(rplStr[0], rplStr[1]))
+            crv_parenting(data, crv, rplStr)
 
 
 def update_curve_from_data(data, rplStr=["", ""]):
     """update the curves from a given curve data dict
 
     Args:
-        data (TYPE): Description
+        data (dict): serialized curve data
     """
 
     for crv in data["curves_names"]:
