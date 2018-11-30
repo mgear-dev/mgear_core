@@ -290,7 +290,7 @@ def get_color(node):
         else:
             color = shp.overrideColor.get()
 
-    return color
+        return color
 
 
 def set_color(node, color):
@@ -350,13 +350,25 @@ def collect_curve_shapes(crv, rplStr=["", ""]):
     return shapesDict, shapes_names
 
 
-def collect_curve_data(objs=None, rplStr=["", ""]):
+def collect_selected_curve_data(objs=None):
+    """Generate a dictionary descriving the curve data from selected objs
+
+    Args:
+        objs (None, optional): Optionally a list of object can be provided
+    """
+    if not objs:
+        objs = pm.selected()
+
+    return collect_curve_data(objs)
+
+
+def collect_curve_data(objs, rplStr=["", ""]):
     """Generate a dictionary descriving the curve data
 
     Suport multiple objects
 
     Args:
-        objs (dagNode, optional): Curve object to store
+        objs (dagNode): Curve object to store
         collect_trans (bool, optional): if false will skip the transformation
             matrix
         rplStr (list, optional): String to replace in names. This allow to
@@ -367,8 +379,10 @@ def collect_curve_data(objs=None, rplStr=["", ""]):
         dict: Curves data
     """
 
+    # return if an empty list or None objects are pass
     if not objs:
-        objs = pm.selected()
+        return
+
     if not isinstance(objs, list):
         objs = [objs]
 
@@ -586,7 +600,7 @@ def export_curve(filePath=None, objs=None):
         if not isinstance(filePath, basestring):
             filePath = filePath[0]
 
-    data = collect_curve_data(objs)
+    data = collect_selected_curve_data(objs)
     data_string = json.dumps(data, indent=4, sort_keys=True)
     f = open(filePath, 'w')
     f.write(data_string)
