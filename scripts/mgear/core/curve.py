@@ -546,8 +546,21 @@ def update_curve_from_data(data, rplStr=["", ""]):
 
         if first_shape:
             first_shape = first_shape[0]
-            # clean old shapes
-            pm.delete(first_shape.listRelatives(shapes=True))
+            # Because we don know if the number of shapes will match between
+            # the old and new shapes. We only take care of the connections
+            # of the first shape. Later will be apply to all the new shapes
+
+            # store shapes connections
+            shapes = first_shape.listRelatives(shapes=True)
+            if shapes:
+                cnx = shapes[0].listConnections(plugs=True, c=True)
+                cnx = [[c[1], c[0].shortName()] for c in cnx]
+                # Disconnect the conexion before delete the old shapes
+                for s in shapes:
+                    for c in s.listConnections(plugs=True, c=True):
+                        pm.disconnectAttr(c[0])
+                # clean old shapes
+                pm.delete(shapes)
 
         for sh in crv_dict["shapes_names"]:
             points = shp_dict[sh]["points"]
@@ -566,8 +579,10 @@ def update_curve_from_data(data, rplStr=["", ""]):
                            degree=degree,
                            knot=knots)
             set_color(obj, color)
-
             for extra_shp in obj.listRelatives(shapes=True):
+                # Restore shapes connections
+                for c in cnx:
+                    pm.connectAttr(c[0], extra_shp.attr(c[1]))
                 first_shape.addChild(extra_shp, add=True, shape=True)
                 pm.delete(obj)
 
