@@ -463,7 +463,6 @@ def create_curve_from_data_by_name(crv,
         first_shape = first_shape[0]
         # clean old shapes
         pm.delete(first_shape.listRelatives(shapes=True))
-
     for sh in crv_dict["shapes_names"]:
         points = shp_dict[sh]["points"]
         form = shp_dict[sh]["form"]
@@ -473,15 +472,15 @@ def create_curve_from_data_by_name(crv,
             close = True
         else:
             close = False
+
         # we dont use replace in order to support multiple shapes
-        nsh = sh.replace(rplStr[0], rplStr[1])
+        nsh = crv.replace(rplStr[0], rplStr[1])
         obj = pm.curve(name=nsh.replace("Shape", ""),
                        point=points,
                        periodic=close,
                        degree=degree,
                        knot=knots)
         set_color(obj, color)
-
         # handle multiple shapes in the same transform
         if not first_shape:
             first_shape = obj
