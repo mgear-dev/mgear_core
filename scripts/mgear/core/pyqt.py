@@ -126,7 +126,7 @@ def maya_main_window():
     return QtCompat.wrapInstance(long(main_window_ptr), QtWidgets.QWidget)
 
 
-def showDialog(dialog, dInst=True, *args):
+def showDialog(dialog, dInst=True, dockable=False, *args):
     """
     Show the defined dialog window
 
@@ -148,13 +148,24 @@ def showDialog(dialog, dInst=True, *args):
     #     windw = dialog(maya_main_window())
     # else:
     windw = dialog()
+
+    # ensure clean workspace name
+    if hasattr(windw, "toolName") and dockable:
+        control = windw.toolName + "WorkspaceControl"
+        if pm.workspaceControl(control, q=True, exists=True):
+            pm.workspaceControl(control, e=True, close=True)
+            pm.deleteUI(control, control=True)
+
     windw.move(QtWidgets.QApplication.desktop().screen().rect().center()
                - windw.rect().center())
 
     # Delete the UI if errors occur to avoid causing winEvent
     # and event errors (in Maya 2014)
     try:
-        windw.show()
+        if dockable:
+            windw.show(dockable=True)
+        else:
+            windw.show()
     except Exception:
         windw.deleteLater()
         traceback.print_exc()
