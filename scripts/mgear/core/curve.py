@@ -413,7 +413,7 @@ def collect_curve_data(objs, rplStr=["", ""]):
     return curves_dict
 
 
-def crv_parenting(data, crv, rplStr=["", ""]):
+def crv_parenting(data, crv, rplStr=["", ""], model=None):
     """Parent the new created curves
 
     Args:
@@ -422,19 +422,50 @@ def crv_parenting(data, crv, rplStr=["", ""]):
         rplStr (list, optional): String to replace in names. This allow to
             change the curve names before store it.
             [old Name to replace, new name to set]
+        model (dagNode, optional): Model top node to help find the correct
+            parent, if  several objects with the same name
     """
     crv_dict = data[crv]
     crv_parent = crv_dict["crv_parent"]
-    if crv_parent:
-        pm.parent(crv.replace(rplStr[0], rplStr[1]),
-                  crv_parent)
+    crv_p = None
+    crv = crv.replace(rplStr[0], rplStr[1])
+    parents = pm.ls(crv_parent)
+    # this will try to find the correct parent by checking the top node
+    # in situations where the name is reapet in many places under same
+    # hierarchy this method will fail.
+    if len(parents) > 1 and model:
+        for p in parents:
+            if model.name() in p.name():
+                crv_p = p
+                break
+    elif len(parents) == 1:
+        crv_p = parents[0]
+    else:
+        pm.displayWarning("More than one parent with the same name found for"
+                          " {}, or not top model root provided.".format(crv))
+        pm.displayWarning("This curve"
+                          "  can't be parented. Please do it manually or"
+                          " review the scene")
+    if crv_p:
+        # we need to ensure that we parent is the new curve.
+        crvs = pm.ls(crv)
+        if len(crvs) > 1:
+            for c in crvs:
+                if not c.getParent():  # if not parent means is the new
+                    crv = c
+                    break
+        elif len(crvs) == 1:
+            crv = crvs[0]
+        pm.parent(crv,
+                  crv_p)
 
 
 def create_curve_from_data_by_name(crv,
                                    data,
                                    replaceShape=False,
                                    rebuildHierarchy=False,
-                                   rplStr=["", ""]):
+                                   rplStr=["", ""],
+                                   model=None):
     """Build one curve from a given curve data dict
 
     Args:
@@ -447,6 +478,8 @@ def create_curve_from_data_by_name(crv,
         rplStr (list, optional): String to replace in names. This allow to
             change the curve names before store it.
             [old Name to replace, new name to set]
+        model (dagNode, optional): Model top node to help find the correct
+            parent, if  several objects with the same name
     """
     crv_dict = data[crv]
 
@@ -455,7 +488,10 @@ def create_curve_from_data_by_name(crv,
     color = crv_dict["crv_color"]
     if replaceShape:
         first_shape = pm.ls(crv.replace(rplStr[0], rplStr[1]))
-
+        if first_shape and model and model == first_shape[0].getParent(-1):
+            pass
+        else:
+            first_shape = None
     else:
         first_shape = None
 
@@ -491,13 +527,14 @@ def create_curve_from_data_by_name(crv,
                 pm.delete(obj)
 
     if rebuildHierarchy:
-        crv_parenting(data, crv, rplStr)
+        crv_parenting(data, crv, rplStr, model)
 
 
 def create_curve_from_data(data,
                            replaceShape=False,
                            rebuildHierarchy=False,
-                           rplStr=["", ""]):
+                           rplStr=["", ""],
+                           model=None):
     """Build the curves from a given curve data dict
 
     Hierarchy rebuild after all curves are build to avoid lost parents
@@ -520,7 +557,7 @@ def create_curve_from_data(data,
     # parenting
     if rebuildHierarchy:
         for crv in data["curves_names"]:
-            crv_parenting(data, crv, rplStr)
+            crv_parenting(data, crv, rplStr, model)
 
 
 def update_curve_from_data(data, rplStr=["", ""]):
