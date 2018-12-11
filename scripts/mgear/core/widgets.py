@@ -168,7 +168,7 @@ def selectFromScreenApi(x, y, x_rect=None, y_rect=None):
         y_rect (int, optional): rectagle selection end y
 
     Returns:
-        TYPE: Description
+        list of str: Name of the objects under the cursor
     """
     # get current selection
     sel = api.MSelectionList()
