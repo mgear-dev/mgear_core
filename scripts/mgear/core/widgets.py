@@ -1,6 +1,7 @@
 """mGear Qt custom widgets"""
 
-from mgear.vendor.Qt import QtCore, QtWidgets
+from mgear.vendor.Qt import QtCore, QtWidgets, QtGui
+import maya.OpenMaya as api
 
 
 #################################################
@@ -148,3 +149,92 @@ class TableWidgetDragRows(QtWidgets.QTableWidget):
                 r = QtWidgets.QAbstractItemView.BelowItem
 
         return r
+
+
+######################################
+# drag and drop QListView to Maya view
+######################################
+
+def selectFromScreenApi(x, y, x_rect=None, y_rect=None):
+    """Find the object under the cursor on Maya view
+
+
+    found here: http://nathanhorne.com/maya-python-selectfromscreen/
+    Thanks Nathan!
+    Args:
+        x (int): rectable selection start x
+        y (int): rectagle selection start y
+        x_rect (int, optional): rectable selection end x
+        y_rect (int, optional): rectagle selection end y
+
+    Returns:
+        TYPE: Description
+    """
+    # get current selection
+    sel = api.MSelectionList()
+    api.MGlobal.getActiveSelectionList(sel)
+
+    # select from screen
+    if x_rect is not None and y_rect is not None:
+        api.MGlobal.selectFromScreen(
+            x, y, x_rect, y_rect, api.MGlobal.kReplaceList)
+    else:
+        api.MGlobal.selectFromScreen(x, y, api.MGlobal.kReplaceList)
+    objects = api.MSelectionList()
+    api.MGlobal.getActiveSelectionList(objects)
+
+    # restore selection
+    api.MGlobal.setActiveSelectionList(sel, api.MGlobal.kReplaceList)
+
+    # return the objects as strings
+    fromScreen = []
+    objects.getSelectionStrings(fromScreen)
+    return fromScreen
+
+
+class DragQListView(QtWidgets.QListView):
+    """QListView with basic drop functionality
+
+    Attributes:
+        exp (int): Extend the mouse position to a rectable
+        theAction (func): function triggered when drop
+    """
+
+    def __init__(self, parent):
+        super(DragQListView, self).__init__(parent)
+        self.setDragEnabled(True)
+        self.setAcceptDrops(False)
+        self.setDropIndicatorShown(True)
+        self.setAlternatingRowColors(True)
+        self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.setDefaultDropAction(QtCore.Qt.CopyAction)
+        self.exp = 3
+
+    def mouseMoveEvent(self, event):
+
+        mimeData = QtCore.QMimeData()
+        mimeData.setText('%d,%d' % (event.x(), event.y()))
+
+        drag = QtGui.QDrag(self)
+        drag.setMimeData(mimeData)
+        drag.setHotSpot(event.pos())
+        dropAction = drag.start(QtCore.Qt.MoveAction)
+        if not dropAction == QtCore.Qt.MoveAction:
+            pos = QtGui.QCursor.pos()
+            qApp = QtWidgets.QApplication.instance()
+            widget = qApp.widgetAt(pos)
+            relpos = widget.mapFromGlobal(pos)
+            # need to invert Y axis
+            invY = widget.frameSize().height() - relpos.y()
+            sel = selectFromScreenApi(relpos.x() - self.exp,
+                                      invY - self.exp,
+                                      relpos.x() + self.exp,
+                                      invY + self.exp)
+
+            self.doAction(sel)
+
+    def setAction(self, action):
+        self.theAction = action
+
+    def doAction(self, sel):
+        self.theAction(sel)
