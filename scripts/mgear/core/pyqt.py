@@ -166,6 +166,7 @@ def showDialog(dialog, dInst=True, dockable=False, *args):
             windw.show(dockable=True)
         else:
             windw.show()
+        return windw
     except Exception:
         windw.deleteLater()
         traceback.print_exc()
