@@ -11,7 +11,6 @@ This module is derivated from Chad Vernon's Skin IO.
 # GLOBAL
 #############################################
 import os
-import cPickle as pickle
 import json
 
 import pymel.core as pm
@@ -195,9 +194,8 @@ def exportSkin(filePath=None, objs=None, *args):
                                 obj.name()))
 
     if packDic["objs"]:
-        fh = open(filePath, 'wb')
-        pickle.dump(packDic, fh, pickle.HIGHEST_PROTOCOL)
-        fh.close()
+        with open(filePath, 'w') as fp:
+            json.dump(packDic, fp, indent=4, sort_keys=True)
 
         return True
 
@@ -242,9 +240,8 @@ def exportSkinPack(packPath=None, objs=None, *args):
 
     if packDic["packFiles"]:
         data_string = json.dumps(packDic, indent=4, sort_keys=True)
-        f = open(packPath, 'w')
-        f.write(data_string + "\n")
-        f.close()
+        with open(packPath, 'w') as f:
+            f.write(data_string + "\n")
         pm.displayInfo("Skin Pack exported: " + packPath)
     else:
         pm.displayWarning("Any of the selected objects have Skin Cluster. "
@@ -305,7 +302,7 @@ def setData(skinCls, dataDic):
 ######################################
 
 
-def getObjsFromSkinFile(filePath=None, *args):
+def _getObjsFromSkinFile(filePath=None, *args):
     # retrive the object names inside gSkin file
     if not filePath:
         startDir = pm.workspace(q=True, rootDirectory=True)
@@ -319,10 +316,14 @@ def getObjsFromSkinFile(filePath=None, *args):
         filePath = filePath[0]
 
     # Read in the file
-    fh = open(filePath, 'rb')
-    data = pickle.load(fh)
-    fh.close()
-    for x in data["objs"]:
+    with open(filePath, 'r') as fp:
+        data = json.load(fp)
+        return data["objs"]
+
+
+def getObjsFromSkinFile(filePath=None, *args):
+    objs = _getObjsFromSkinFile(filePath)
+    for x in objs:
         print x
 
 
@@ -340,9 +341,8 @@ def importSkin(filePath=None, *args):
         filePath = filePath[0]
 
     # Read in the file
-    fh = open(filePath, 'rb')
-    dataPack = pickle.load(fh)
-    fh.close()
+    with open(filePath, 'r') as fp:
+        dataPack = json.load(fp)
 
     for data in dataPack["objDDic"]:
 
@@ -371,7 +371,7 @@ def importSkin(filePath=None, *args):
                 except Exception:
                     notFound = data['weights'].keys()
                     sceneJoints = set([pm.PyNode(x).name()
-                                      for x in pm.ls(type='joint')])
+                                       for x in pm.ls(type='joint')])
 
                     for j in notFound:
                         if j in sceneJoints:
@@ -401,10 +401,11 @@ def importSkinPack(filePath=None, *args):
     if not isinstance(filePath, basestring):
         filePath = filePath[0]
 
-    packDic = json.load(open(filePath))
-    for pFile in packDic["packFiles"]:
-        filePath = os.path.join(os.path.split(filePath)[0], pFile)
-        importSkin(filePath, True)
+    with open(filePath) as fp:
+        packDic = json.load(fp)
+        for pFile in packDic["packFiles"]:
+            filePath = os.path.join(os.path.split(filePath)[0], pFile)
+            importSkin(filePath, True)
 
 ######################################
 # Skin Copy

@@ -12,13 +12,13 @@ def install_skinning_menu():
         ("Copy Skin", partial(skin.skinCopy, None, None)),
         ("Select Skin Deformers", skin.selectDeformers),
         ("-----", None),
-        ("Import Skin", skin.importSkin),
-        ("Import Skin Pack", skin.importSkinPack),
+        ("Import Skin", partial(skin.importSkin, None)),
+        ("Import Skin Pack", partial(skin.importSkinPack, None)),
         ("-----", None),
-        ("Export Skin", skin.exportSkin),
-        ("Export Skin Pack", skin.exportSkinPack),
+        ("Export Skin", partial(skin.exportSkin, None, None)),
+        ("Export Skin Pack", partial(skin.exportSkinPack, None, None)),
         ("-----", None),
-        ("Get Names in gSkin File", skin.getObjsFromSkinFile)
+        ("Get Names in gSkin File", partial(skin.getObjsFromSkinFile, None))
     )
 
     mgear.menu.install("Skinning", commands)
