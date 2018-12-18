@@ -276,9 +276,9 @@ def moveChannel(attr, sourceNode, targetNode, duplicatedPolicy=None):
         targetNode (PyNoe or str): The target node for the channel
         duplicatedPolicy (None, str): Set the duplicated channel policy
     """
-    if isinstance(sourceNode, str):
+    if isinstance(sourceNode, str) or isinstance(sourceNode, unicode):
         sourceNode = pm.PyNode(sourceNode)
-    if isinstance(targetNode, str):
+    if isinstance(targetNode, str) or isinstance(targetNode, unicode):
         targetNode = pm.PyNode(targetNode)
 
     try:
