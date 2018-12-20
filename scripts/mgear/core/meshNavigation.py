@@ -6,6 +6,7 @@
 import pymel.core as pm
 import pymel.core.datatypes as datatypes
 from maya import OpenMaya
+from . import utils
 
 
 #############################################
@@ -309,7 +310,7 @@ def getClosestVertexFromTransform(geo, loc):
     """Get closest vertex from transform
 
     Arguments:
-        geo (dagNode): Mesh object
+        geo (dagNode or str): Mesh object
         loc (matrix): location transform
 
     Returns:
@@ -318,6 +319,7 @@ def getClosestVertexFromTransform(geo, loc):
     >>> v = mn.getClosestVertexFromTransform(geometry, joint)
 
     """
+    geo = utils.as_pynode(geo)
     polygon, pos = getClosestPolygonFromTransform(geo, loc)
 
     faceVerts = [geo.vtx[i] for i in polygon.getVertices()]
@@ -329,3 +331,63 @@ def getClosestVertexFromTransform(geo, loc):
             minLength = thisLength
             closestVert = v
     return closestVert
+
+
+def find_mirror_edge(obj, edgeIndx):
+    """Return the mirror edge of an edge
+
+    Args:
+        obj (PyNode or str): Mesh object to get the mirror edge
+        edge (int): Index of the edge to find the mirror
+
+    Returns:
+        PyNode: Mirror edge as a pynode
+    """
+    obj = utils.as_pynode(obj)
+
+    edge = pm.PyNode(obj.name() + ".e[{}]".format(str(edgeIndx)))
+    v1 = edge.getPoint(0, space='world')
+    v2 = edge.getPoint(1, space='world')
+
+    # mirror vectors in X axis
+    mv1 = [v1[0] * -1, v1[1], v1[2]]
+    mv2 = [v2[0] * -1, v2[1], v2[2]]
+
+    vtx1 = getClosestVertexFromTransform(obj.getShape(),
+                                         mv1)
+    vtx2 = getClosestVertexFromTransform(obj.getShape(),
+                                         mv2)
+    for ee in vtx1.connectedEdges():
+        if ee in vtx2.connectedEdges():
+            return ee
+
+
+def get_closes_edge_index(sourceGeo, targetGeo, edgeIndx):
+    """Get the closes edge index from 2 diferent object.
+
+    In some situation even with same topology and vertez index order. The edge
+    index may change.
+
+    Args:
+        sourceGeo (str): Name of the source object
+        targetGeo (str): Name of the target object
+        edgeIndx (int): Edge Index
+
+    Returns:
+        PyNode: Description
+    """
+    edge = pm.PyNode("{}.e[{}]".format(sourceGeo, str(edgeIndx)))
+
+    verts = edge.connectedVertices()
+
+    closes_v = []
+    for v in verts:
+        vv = getClosestVertexFromTransform(
+            targetGeo, v.getPosition(space="world"))
+        closes_v.append(vv)
+
+    v1_edges = closes_v[0].connectedEdges()
+    v2_edges = closes_v[1].connectedEdges()
+    for e in v1_edges:
+        if e in v2_edges:
+            return e.index()
