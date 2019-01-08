@@ -12,11 +12,13 @@ This module is derivated from Chad Vernon's Skin IO.
 #############################################
 import os
 import json
+import cPickle as pickle
 
 import pymel.core as pm
 import maya.OpenMaya as OpenMaya
 
 FILE_EXT = ".gSkin"
+FILE_JSON_EXT = ".jSkin"
 PACK_EXT = ".gSkinPack"
 
 ######################################
@@ -151,17 +153,27 @@ def exportSkin(filePath=None, objs=None, *args):
                }
 
     if not filePath:
+
+        f2 = "gSkin Binary (*{});;jSkin ASCII  (*{})".format(
+            FILE_EXT, FILE_JSON_EXT)
+        f3 = ";;All Files (*.*)"
+        fileFilters = f2 + f3
         startDir = pm.workspace(q=True, rootDirectory=True)
         filePath = pm.fileDialog2(dialogStyle=2,
                                   fileMode=0,
                                   startingDirectory=startDir,
-                                  fileFilter='mGear Skin (*%s)' % FILE_EXT)
-        filePath = filePath[0]
-    if not filePath:
-        return False
+                                  fileFilter=fileFilters)
+        if filePath:
+            filePath = filePath[0]
 
-    if not filePath.endswith(FILE_EXT):
-        filePath += FILE_EXT
+        else:
+            return False
+
+    if (not filePath.endswith(FILE_EXT)
+            and not filePath.endswith(FILE_JSON_EXT)):
+        # filePath += file_ext
+        pm.displayWarning("Not valid file extension for: {}".format(filePath))
+        return
 
     # object parsing
     for obj in objs:
@@ -195,12 +207,19 @@ def exportSkin(filePath=None, objs=None, *args):
 
     if packDic["objs"]:
         with open(filePath, 'w') as fp:
-            json.dump(packDic, fp, indent=4, sort_keys=True)
+            if filePath.endswith(FILE_EXT):
+                pickle.dump(packDic, fp, pickle.HIGHEST_PROTOCOL)
+            else:
+                json.dump(packDic, fp, indent=4, sort_keys=True)
 
         return True
 
 
-def exportSkinPack(packPath=None, objs=None, *args):
+def exportSkinPack(packPath=None, objs=None, use_json=False, *args):
+    if use_json:
+        file_ext = FILE_JSON_EXT
+    else:
+        file_ext = FILE_EXT
 
     if not objs:
         if pm.selected():
@@ -229,9 +248,9 @@ def exportSkinPack(packPath=None, objs=None, *args):
     packDic["rootPath"], packName = os.path.split(packPath)
 
     for obj in objs:
-        fileName = obj.stripNamespace() + FILE_EXT
+        fileName = obj.stripNamespace() + file_ext
         filePath = os.path.join(packDic["rootPath"], fileName)
-        if exportSkin(filePath, [obj]):
+        if exportSkin(filePath, [obj], use_json):
             packDic["packFiles"].append(fileName)
             pm.displayInfo(filePath)
         else:
@@ -247,6 +266,9 @@ def exportSkinPack(packPath=None, objs=None, *args):
         pm.displayWarning("Any of the selected objects have Skin Cluster. "
                           "Skin Pack export aborted.")
 
+
+def exportJsonSkinPack(packPath=None, objs=None, *args):
+    exportSkinPack(packPath, objs, use_json=True)
 
 ######################################
 # Skin setters
@@ -305,11 +327,16 @@ def setData(skinCls, dataDic):
 def _getObjsFromSkinFile(filePath=None, *args):
     # retrive the object names inside gSkin file
     if not filePath:
+        f1 = 'mGear Skin (*{0} *{1})'.format(FILE_EXT, FILE_JSON_EXT)
+        f2 = ";;gSkin Binary (*{0});;jSkin ASCII  (*{1})".format(
+            FILE_EXT, FILE_JSON_EXT)
+        f3 = ";;All Files (*.*)"
+        fileFilters = f1 + f2 + f3
         startDir = pm.workspace(q=True, rootDirectory=True)
         filePath = pm.fileDialog2(dialogStyle=2,
                                   fileMode=1,
                                   startingDirectory=startDir,
-                                  fileFilter='mGear Skin (*%s)' % FILE_EXT)
+                                  fileFilter=fileFilters)
     if not filePath:
         return
     if not isinstance(filePath, basestring):
@@ -317,24 +344,34 @@ def _getObjsFromSkinFile(filePath=None, *args):
 
     # Read in the file
     with open(filePath, 'r') as fp:
-        data = json.load(fp)
+        if filePath.endswith(FILE_EXT):
+            data = pickle.load(fp)
+        else:
+            data = json.load(fp)
+
         return data["objs"]
 
 
 def getObjsFromSkinFile(filePath=None, *args):
     objs = _getObjsFromSkinFile(filePath)
-    for x in objs:
-        print x
+    if objs:
+        for x in objs:
+            print x
 
 
 def importSkin(filePath=None, *args):
 
     if not filePath:
+        f1 = 'mGear Skin (*{0} *{1})'.format(FILE_EXT, FILE_JSON_EXT)
+        f2 = ";;gSkin Binary (*{0});;jSkin ASCII  (*{1})".format(
+            FILE_EXT, FILE_JSON_EXT)
+        f3 = ";;All Files (*.*)"
+        fileFilters = f1 + f2 + f3
         startDir = pm.workspace(q=True, rootDirectory=True)
         filePath = pm.fileDialog2(dialogStyle=2,
                                   fileMode=1,
                                   startingDirectory=startDir,
-                                  fileFilter='mGear Skin (*%s)' % FILE_EXT)
+                                  fileFilter=fileFilters)
     if not filePath:
         return
     if not isinstance(filePath, basestring):
@@ -342,7 +379,10 @@ def importSkin(filePath=None, *args):
 
     # Read in the file
     with open(filePath, 'r') as fp:
-        dataPack = json.load(fp)
+        if filePath.endswith(FILE_EXT):
+            dataPack = pickle.load(fp)
+        else:
+            dataPack = json.load(fp)
 
     for data in dataPack["objDDic"]:
 
@@ -369,13 +409,12 @@ def importSkin(filePath=None, *args):
                     skinCluster = pm.skinCluster(
                         joints, objNode, tsb=True, nw=2, n=data['skinClsName'])
                 except Exception:
-                    notFound = data['weights'].keys()
                     sceneJoints = set([pm.PyNode(x).name()
                                        for x in pm.ls(type='joint')])
-
-                    for j in notFound:
-                        if j in sceneJoints:
-                            notFound.remove(j)
+                    notFound = []
+                    for j in data['weights'].keys():
+                        if j not in sceneJoints:
+                            notFound.append(str(j))
                     pm.displayWarning("Object: " + objName + " Skiped. Can't "
                                       "found corresponding deformer for the "
                                       "following joints: " + str(notFound))

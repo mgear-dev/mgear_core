@@ -16,7 +16,10 @@ def install_skinning_menu():
         ("Import Skin Pack", partial(skin.importSkinPack, None)),
         ("-----", None),
         ("Export Skin", partial(skin.exportSkin, None, None)),
-        ("Export Skin Pack", partial(skin.exportSkinPack, None, None)),
+        ("Export Skin Pack Binary", partial(skin.exportSkinPack, None, None)),
+        ("Export Skin Pack ASCII", partial(skin.exportJsonSkinPack,
+                                           None,
+                                           None)),
         ("-----", None),
         ("Get Names in gSkin File", partial(skin.getObjsFromSkinFile, None))
     )
