@@ -901,12 +901,12 @@ def controller_tag_connect(ctt, tagParent):
         ctt (TYPE): Teh control tag
         tagParent (TYPE): The object with the parent control tag
     """
+    if pm.controller(tagParent, q=True):
+        tpTagNode = pm.PyNode(pm.controller(tagParent, q=True)[0])
+        tpTagNode.cycleWalkSibling.set(True)
+        pm.connectAttr(tpTagNode.prepopulate, ctt.prepopulate, f=True)
 
-    tpTagNode = pm.PyNode(pm.controller(tagParent, q=True)[0])
-    tpTagNode.cycleWalkSibling.set(True)
-    pm.connectAttr(tpTagNode.prepopulate, ctt.prepopulate, f=True)
-
-    ni = attribute.get_next_available_index(tpTagNode.children)
-    pm.disconnectAttr(ctt.parent)
-    pm.connectAttr(ctt.parent, tpTagNode.attr(
-                   "children[%s]" % str(ni)))
+        ni = attribute.get_next_available_index(tpTagNode.children)
+        pm.disconnectAttr(ctt.parent)
+        pm.connectAttr(ctt.parent, tpTagNode.attr(
+                       "children[%s]" % str(ni)))
