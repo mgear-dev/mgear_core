@@ -326,7 +326,7 @@ class UserTimeChangedManager(object):
     def userTimeChanged(self, *args):
         """Check if playback is active, if so return without calling func
         """
-        if om.MConditionMessage.getConditionState("playingBack"):
+        if om.MConditionMessage.getConditionState("playingBackAuto"):
             return
         self.func(*args)
 
