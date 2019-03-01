@@ -112,15 +112,29 @@ def collectInfluenceWeights(skinCls, dagPath, components, dataDic):
     for ii in range(influencePaths.length()):
         influenceName = influencePaths[ii].partialPathName()
         influenceWithoutNamespace = pm.PyNode(influenceName).stripNamespace()
-        inf_w = [weights[jj * numInfluences + ii] for jj
-                 in range(numComponentsPerInfluence)]
-        dataDic['weights'][influenceWithoutNamespace] = inf_w
+        # build a dictionary of {vtx: weight}. Skip 0.0 weights.
+        inf_w = {
+                jj: weights[jj * numInfluences + ii]
+                for jj in range(numComponentsPerInfluence)
+                if weights[jj * numInfluences + ii] != 0.0
+                }
+        # cast to float to avoid rounding errors when dividing integers?
+        dataDic['vertexCount'] = int(weights.length() / float(numInfluences))
+        # cast influenceWithoutNamespace as string otherwise it can end up
+        # as DependNodeName(u'jointName') in the data.
+        dataDic['weights'][str(influenceWithoutNamespace)] = inf_w
 
 
 def collectBlendWeights(skinCls, dagPath, components, dataDic):
     weights = OpenMaya.MDoubleArray()
     skinCls.__apimfn__().getBlendWeights(dagPath, components, weights)
-    dataDic['blendWeights'] = [weights[i] for i in range(weights.length())]
+    # round the weights down. This should be safe on Dual Quat blends
+    # because it is not normalized. And 6 should be more than accurate enough.
+    dataDic['blendWeights'] = {
+            i: round(weights[i], 6)
+            for i in range(weights.length())
+            if round(weights[i], 6) != 0.0
+            }
 
 
 def collectData(skinCls, dataDic):
@@ -129,7 +143,7 @@ def collectData(skinCls, dataDic):
     collectBlendWeights(skinCls, dagPath, components, dataDic)
 
     for attr in ['skinningMethod', 'normalizeWeights']:
-        dataDic[attr] = pm.getAttr('%s.%s' % (skinCls, attr))
+        dataDic[attr] = skinCls.attr(attr).get()
 
     dataDic['skinClsName'] = skinCls.name()
 
@@ -139,7 +153,6 @@ def collectData(skinCls, dataDic):
 ######################################
 
 def exportSkin(filePath=None, objs=None, *args):
-
     if not objs:
         if pm.selected():
             objs = pm.selected()
@@ -154,8 +167,8 @@ def exportSkin(filePath=None, objs=None, *args):
 
     if not filePath:
 
-        f2 = "gSkin Binary (*{});;jSkin ASCII  (*{})".format(
-            FILE_EXT, FILE_JSON_EXT)
+        f2 = "jSkin ASCII  (*{});;gSkin Binary (*{})".format(
+            FILE_JSON_EXT, FILE_EXT)
         f3 = ";;All Files (*.*)"
         fileFilters = f2 + f3
         startDir = pm.workspace(q=True, rootDirectory=True)
@@ -175,6 +188,7 @@ def exportSkin(filePath=None, objs=None, *args):
         pm.displayWarning("Not valid file extension for: {}".format(filePath))
         return
 
+    _, file_ext = os.path.splitext(filePath)
     # object parsing
     for obj in objs:
         skinCls = getSkinCluster(obj)
@@ -183,12 +197,18 @@ def exportSkin(filePath=None, objs=None, *args):
                 obj.name() + ": Skipped because don't have Skin Cluster")
             pass
         else:
+            #start by pruning by a tiny amount. Enough to not make a noticeable
+            #change to the skin, but it will remove infinitely small weights.
+            #Otherwise, compressing will do almost nothing!
+            pm.skinPercent(skinCls, obj, pruneWeights=0.001)
 
             dataDic = {'weights': {},
                        'blendWeights': [],
                        'skinClsName': "",
                        'objName': "",
-                       'nameSpace': ""
+                       'nameSpace': "",
+                       'vertexCount': 0,
+                       'skinDataFormat': 'compressed',
                        }
 
             dataDic["objName"] = obj.name()
@@ -198,9 +218,9 @@ def exportSkin(filePath=None, objs=None, *args):
 
             packDic["objs"].append(obj.name())
             packDic["objDDic"].append(dataDic)
+            exportMsg = "Exported skinCluster {} ({} influences, {} points) {}"
             pm.displayInfo(
-                "Exported skinCluster %s (%d influences, %d "
-                "points) %s" % (skinCls.name(),
+                exportMsg.format(skinCls.name(),
                                 len(dataDic['weights'].keys()),
                                 len(dataDic['blendWeights']),
                                 obj.name()))
@@ -275,22 +295,32 @@ def exportJsonSkinPack(packPath=None, objs=None, *args):
 ######################################
 
 
-def setInfluenceWeights(skinCls, dagPath, components, dataDic):
+def setInfluenceWeights(skinCls, dagPath, components, dataDic, compressed):
     unusedImports = []
     weights = getCurrentWeights(skinCls, dagPath, components)
     influencePaths = OpenMaya.MDagPathArray()
     numInfluences = skinCls.__apimfn__().influenceObjects(influencePaths)
     numComponentsPerInfluence = weights.length() / numInfluences
 
-    for importedInfluence, importedWeights in dataDic['weights'].items():
+    for importedInfluence, wtValues in dataDic['weights'].items():
         for ii in range(influencePaths.length()):
             influenceName = influencePaths[ii].partialPathName()
             nnspace = pm.PyNode(influenceName).stripNamespace()
             influenceWithoutNamespace = nnspace
             if influenceWithoutNamespace == importedInfluence:
-                for jj in range(numComponentsPerInfluence):
-                    weights.set(importedWeights[jj], jj * numInfluences + ii)
-                break
+                if compressed:
+                    for jj in range(numComponentsPerInfluence):
+                        # json keys can't be integers. The vtx number key
+                        # is a string. example: vtx[35] would be: "35": 0.6974,
+                        # But the binary format is still an int, so check both.
+                        # if the key doesn't exist, set it to 0.0
+                        wt = wtValues.get(jj) or wtValues.get(str(jj)) or 0.0
+                        weights.set(wt, jj * numInfluences + ii)
+                else:
+                    for jj in range(numComponentsPerInfluence):
+                        wt = wtValues[jj]
+                        weights.set(wt, jj * numInfluences + ii)
+                    break
         else:
             unusedImports.append(importedInfluence)
 
@@ -304,20 +334,35 @@ def setInfluenceWeights(skinCls, dagPath, components, dataDic):
                                     False)
 
 
-def setBlendWeights(skinCls, dagPath, components, dataDic):
-    blendWeights = OpenMaya.MDoubleArray(len(dataDic['blendWeights']))
-    for i, w in enumerate(dataDic['blendWeights']):
-        blendWeights.set(w, i)
+def setBlendWeights(skinCls, dagPath, components, dataDic, compressed):
+    if compressed:
+        # The compressed format skips 0.0 weights. If the key is empty,
+        # set it to 0.0. JSON keys can't be integers. The vtx number key
+        # is a string. example: vtx[35] would be: "35": 0.6974,
+        # But the binary format is still an int, so check the key type.
+        blendWeights = OpenMaya.MDoubleArray(dataDic['vertexCount'])
+        for key, value in dataDic['blendWeights'].items():
+            if isinstance(key, str):
+                blendWeights.set(value, int(key))
+            if isinstance(key, int):
+                blendWeights.set(value, key)
+    else:
+        # The original weight format was a full list for every vertex
+        # For backwards compatibility on older skin files:
+        blendWeights = OpenMaya.MDoubleArray(len(dataDic['blendWeights']))
+        for ii, w in enumerate(dataDic['blendWeights']):
+            blendWeights.set(w, ii)
+
     skinCls.__apimfn__().setBlendWeights(dagPath, components, blendWeights)
 
 
-def setData(skinCls, dataDic):
+def setData(skinCls, dataDic, compressed):
     dagPath, components = getGeometryComponents(skinCls)
-    setInfluenceWeights(skinCls, dagPath, components, dataDic)
-    setBlendWeights(skinCls, dagPath, components, dataDic)
-
+    setInfluenceWeights(skinCls, dagPath, components, dataDic, compressed)
     for attr in ['skinningMethod', 'normalizeWeights']:
-        pm.setAttr('%s.%s' % (skinCls, attr), dataDic[attr])
+        skinCls.attr(attr).set(dataDic[attr])
+    setBlendWeights(skinCls, dagPath, components, dataDic, compressed)
+
 
 ######################################
 # Skin import
@@ -356,7 +401,7 @@ def getObjsFromSkinFile(filePath=None, *args):
     objs = _getObjsFromSkinFile(filePath)
     if objs:
         for x in objs:
-            print x
+            print(x)
 
 
 def importSkin(filePath=None, *args):
@@ -385,6 +430,13 @@ def importSkin(filePath=None, *args):
             dataPack = json.load(fp)
 
     for data in dataPack["objDDic"]:
+        # This checks if the jSkin file has the new style compressed format.
+        # use a skinDataFormat key to check for backwards compatibility.
+        # If it doesn't exist, just continue with the old method.
+        compressed = False
+        if data.has_key('skinDataFormat'):
+            if data['skinDataFormat'] == 'compressed':
+                compressed = True
 
         try:
             skinCluster = False
@@ -393,10 +445,14 @@ def importSkin(filePath=None, *args):
 
             try:
                 meshVertices = pm.polyEvaluate(objNode, vertex=True)
-                importedVertices = len(data['blendWeights'])
+                if compressed:
+                    importedVertices = data['vertexCount']
+                else:
+                    importedVertices = len(data['blendWeights'])
                 if meshVertices != importedVertices:
-                    pm.displayWarning('Vertex counts do not match. %d != %d' %
-                                      (meshVertices, importedVertices))
+                    warningMsg = 'Vertex counts do not match. {} != {}'
+                    pm.displayWarning(warningMsg.format(meshVertices,
+                                                        importedVertices))
                     continue
             except Exception:
                 pass
@@ -420,12 +476,12 @@ def importSkin(filePath=None, *args):
                                       "following joints: " + str(notFound))
                     continue
             if skinCluster:
-                setData(skinCluster, data)
-                print 'Imported skin for: %s' % objName
+                setData(skinCluster, data, compressed)
+                print('Imported skin for: {}'.format(objName))
 
         except Exception:
-            pm.displayWarning("Object: " + objName + " Skiped. Can NOT be "
-                              "found in the scene")
+            warningMsg = "Object: {} Skipped. Can NOT be found in the scene"
+            pm.displayWarning(warningMsg.format(objName))
 
 
 def importSkinPack(filePath=None, *args):
@@ -488,8 +544,8 @@ def skinCopy(sourceMesh=None, targetMesh=None, *args):
                                sm=True,
                                nr=True)
         else:
-            pm.displayError("Source Mesh :" + sourceMesh.name() + " Don't "
-                            "have skinCluster")
+            errorMsg = "Source Mesh : {} doesn't have a skinCluster."
+            pm.displayError(errorMsg.format(sourceMesh.name()))
 
 ######################################
 # Skin Utils
