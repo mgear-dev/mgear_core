@@ -200,7 +200,9 @@ def exportSkin(filePath=None, objs=None, *args):
             #start by pruning by a tiny amount. Enough to not make a noticeable
             #change to the skin, but it will remove infinitely small weights.
             #Otherwise, compressing will do almost nothing!
-            pm.skinPercent(skinCls, obj, pruneWeights=0.001)
+            if isinstance(obj.getShape(), pm.nodetypes.Mesh):
+                #TODO: Implement pruning on nurbs. Less straight-forward
+                pm.skinPercent(skinCls, obj, pruneWeights=0.001)
 
             dataDic = {'weights': {},
                        'blendWeights': [],
@@ -444,7 +446,23 @@ def importSkin(filePath=None, *args):
             objNode = pm.PyNode(objName)
 
             try:
-                meshVertices = pm.polyEvaluate(objNode, vertex=True)
+                # use getShapes() else meshes with 2+ shapes will fail.
+                #TODO: multiple shape nodes is not currently supported in
+                # the file structure! It should raise an error.
+                # Also noIntermediate otherwise it will count shapeOrig nodes.
+                objShapes = objNode.getShapes(noIntermediate=True)
+
+                if isinstance(objNode.getShape(), pm.nodetypes.Mesh):
+                    meshVertices = pm.polyEvaluate(objShapes, vertex=True)
+                elif isinstance(objNode.getShape(), pm.nodetypes.NurbsSurface):
+                    # if nurbs, count the cvs instead of the vertices.
+                    meshVertices = sum([len(shape.cv) for shape in objShapes])
+                elif isinstance(objNode.getShape(), pm.nodetypes.NurbsCurve):
+                    meshVertices = sum([len(shape.cv) for shape in objShapes])
+                else:
+                    #TODO: Implement other skinnable objs like lattices.
+                    meshVertices = 0
+
                 if compressed:
                     importedVertices = data['vertexCount']
                 else:
