@@ -341,13 +341,10 @@ def setBlendWeights(skinCls, dagPath, components, dataDic, compressed):
         # The compressed format skips 0.0 weights. If the key is empty,
         # set it to 0.0. JSON keys can't be integers. The vtx number key
         # is unicode. example: vtx[35] would be: u"35": 0.6974,
-        # But the binary format is still an int, so check the key type.
+        # But the binary format is still an int, so cast the key to int.
         blendWeights = OpenMaya.MDoubleArray(dataDic['vertexCount'])
         for key, value in dataDic['blendWeights'].items():
-            if isinstance(key, basestring):
                 blendWeights.set(value, int(key))
-            if isinstance(key, int):
-                blendWeights.set(value, key)
     else:
         # The original weight format was a full list for every vertex
         # For backwards compatibility on older skin files:
