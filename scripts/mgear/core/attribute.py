@@ -292,7 +292,7 @@ def moveChannel(attr, sourceNode, targetNode, duplicatedPolicy=None):
                           " source: {}".format(attr, sourceNode.name()))
         return
     atType = at.type()
-    if atType in ["double", "enum"]:
+    if atType in ["double", "float", "enum"]:
 
         newAtt = None
         attrName = attr
@@ -324,7 +324,7 @@ def moveChannel(attr, sourceNode, targetNode, duplicatedPolicy=None):
         if not newAtt:
             # get the attr data
             value = at.get()
-            if atType == "double":
+            if atType in ["double", "float"]:
                 kwargs = {}
                 min = at.getMin()
                 if min:
@@ -342,11 +342,11 @@ def moveChannel(attr, sourceNode, targetNode, duplicatedPolicy=None):
             pm.deleteAttr(at)
 
             # rebuild the attr
-            if atType == "double":
+            if atType in ["double", "float"]:
                 pm.addAttr(targetNode,
                            ln=attrName,
                            niceName=nName,
-                           at="double",
+                           at=atType,
                            dv=value,
                            k=True,
                            **kwargs)
