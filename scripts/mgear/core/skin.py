@@ -313,7 +313,7 @@ def setInfluenceWeights(skinCls, dagPath, components, dataDic, compressed):
                 if compressed:
                     for jj in range(numComponentsPerInfluence):
                         # json keys can't be integers. The vtx number key
-                        # is a string. example: vtx[35] would be: "35": 0.6974,
+                        # is unicode. example: vtx[35] would be: u"35": 0.6974,
                         # But the binary format is still an int, so check both.
                         # if the key doesn't exist, set it to 0.0
                         wt = wtValues.get(jj) or wtValues.get(str(jj)) or 0.0
@@ -340,11 +340,11 @@ def setBlendWeights(skinCls, dagPath, components, dataDic, compressed):
     if compressed:
         # The compressed format skips 0.0 weights. If the key is empty,
         # set it to 0.0. JSON keys can't be integers. The vtx number key
-        # is a string. example: vtx[35] would be: "35": 0.6974,
+        # is unicode. example: vtx[35] would be: u"35": 0.6974,
         # But the binary format is still an int, so check the key type.
         blendWeights = OpenMaya.MDoubleArray(dataDic['vertexCount'])
         for key, value in dataDic['blendWeights'].items():
-            if isinstance(key, str):
+            if isinstance(key, basestring):
                 blendWeights.set(value, int(key))
             if isinstance(key, int):
                 blendWeights.set(value, key)
