@@ -50,7 +50,7 @@ def addAttribute(node,
         str: The long name of the new attribute
     """
     if node.hasAttr(longName):
-        mgear.log("Attribute already exists", mgear.error)
+        mgear.log("Attribute already exists", mgear.sev_error)
         return
 
     data = {}
@@ -116,7 +116,7 @@ def addColorAttribute(node,
 
     """
     if node.hasAttr(longName):
-        mgear.log("Attribute already exists", mgear.error)
+        mgear.log("Attribute already exists", mgear.sev_error)
         return
 
     data = {}
@@ -501,7 +501,7 @@ def setRotOrder(node, s="XYZ"):
     a = ["XYZ", "YZX", "ZXY", "XZY", "YXZ", "ZYX"]
 
     if s not in a:
-        mgear.log("Invalid Rotorder : " + s, mgear.siError)
+        mgear.log("Invalid Rotorder : " + s, mgear.sev_error)
         return False
 
     # Unless Softimage there is no event on the rotorder parameter to
@@ -538,7 +538,7 @@ def setInvertMirror(node, invList=None):
 
     for axis in invList:
         if axis not in aDic:
-            mgear.log("Invalid Invert Axis : " + axis, mgear.siError)
+            mgear.log("Invalid Invert Axis : " + axis, mgear.sev_error)
             return False
 
         node.setAttr(aDic[axis], True)
