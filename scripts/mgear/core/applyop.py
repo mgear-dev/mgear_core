@@ -14,7 +14,6 @@ Operators are any node that connected to other nodes creates a rig behaviour::
 #############################################
 import pymel.core as pm
 from pymel.core import datatypes
-from mgear.core import node as nod
 
 #############################################
 # BUILT IN NODES
@@ -641,11 +640,7 @@ def gear_squashstretch2_op(out,
     # osx
     # Also helper connection for scale compensation (scaleComp)
     mult_node = pm.createNode("multiplyDivide")
-    clamp_node = nod.createClampNode(
-        [node.outputX, node.outputY, node.outputZ],
-        [0.001, 0.001, 0.001],
-        [100000, 100000, 100000])
-    pm.connectAttr(clamp_node + ".output", mult_node + ".input1")
+    pm.connectAttr(node + ".output", mult_node + ".input1")
     for axis in "XYZ":
         pm.connectAttr(mult_node + ".output%s" % axis, out + ".scale%s" % axis)
     if scaleComp:
