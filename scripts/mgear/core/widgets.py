@@ -209,6 +209,7 @@ class DragQListView(QtWidgets.QListView):
         self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.setDefaultDropAction(QtCore.Qt.CopyAction)
         self.exp = 3
+        self.ignore_self = True
 
     def mouseMoveEvent(self, event):
 
@@ -223,6 +224,9 @@ class DragQListView(QtWidgets.QListView):
             pos = QtGui.QCursor.pos()
             qApp = QtWidgets.QApplication.instance()
             widget = qApp.widgetAt(pos)
+            if self.ignore_self and (widget is self or
+                                     widget.objectName() == "qt_scrollarea_viewport"):
+                return
             relpos = widget.mapFromGlobal(pos)
             # need to invert Y axis
             invY = widget.frameSize().height() - relpos.y()
