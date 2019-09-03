@@ -215,7 +215,7 @@ def findComponentChildren2(node, name, sideIndex):
     """
     children = []
     for item in cmds.listRelatives(node.name(), allDescendents=True,
-                                   type="transform"):
+                                   fullPath=True, type="transform"):
         checkName = item.split("|")[-1].split("_")
         if checkName[0] == name and checkName[1] == sideIndex:
             children.append(item)
