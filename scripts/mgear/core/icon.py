@@ -9,6 +9,8 @@ import pymel.util as pmu
 from pymel.core import datatypes
 from mgear.core import curve, attribute
 
+import math
+
 import mgear
 
 #############################################
@@ -1072,6 +1074,63 @@ def guideRootIcon(parent=None,
     for shp in cubeIco.listRelatives(shapes=True):
         rootIco.addChild(shp, add=True, shape=True)
     pm.delete(cubeIco)
+
+    attribute.setNotKeyableAttributes(rootIco)
+    rootIco.addAttr("isGearGuide", at="bool", dv=True)
+    # Set the control shapes isHistoricallyInteresting
+    for oShape in rootIco.getShapes():
+        oShape.isHistoricallyInteresting.set(False)
+
+    return rootIco
+
+
+def guideRootIcon2D(parent=None,
+                    name="root",
+                    width=.5,
+                    color=[0, 0, 0],
+                    m=datatypes.Matrix(),
+                    pos_offset=None,
+                    rot_offset=None):
+    """Create a curve with a 2D ROOT GUIDE shape.
+
+    Note:
+        This icon is specially design for **Shifter** root guides
+
+    Arguments:
+        parent (dagNode): The parent object of the newly created curve.
+        name (str): Name of the curve.
+        width (float): Width of the shape.
+        color (int or list of float): The color in index base or RGB.
+        m (matrix): The global transformation of the curve.
+        pos_offset (vector): The xyz position offset of the curve from
+            its center.
+        rot_offset (vector): The xyz rotation offset of the curve from
+            its center. xyz in radians
+
+    Returns:
+        dagNode: The newly created icon.
+
+    """
+    rootIco = null(parent, name, width, color, m, pos_offset, rot_offset)
+    pm.delete(rootIco.getShapes()[-1])  # Remove the z axis
+
+    rot_offset_orig = datatypes.Vector(math.radians(90), 0, 0)
+    if rot_offset:
+        rot_offset_orig.rotateBy(rot_offset)
+
+    squareWidth = width / 2.0
+    squareIco = square(parent,
+                       name,
+                       squareWidth,
+                       squareWidth,
+                       color,
+                       m,
+                       pos_offset,
+                       rot_offset_orig)
+
+    for shp in squareIco.listRelatives(shapes=True):
+        rootIco.addChild(shp, add=True, shape=True)
+    pm.delete(squareIco)
 
     attribute.setNotKeyableAttributes(rootIco)
     rootIco.addAttr("isGearGuide", at="bool", dv=True)
