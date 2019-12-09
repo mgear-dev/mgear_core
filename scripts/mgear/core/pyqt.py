@@ -155,9 +155,11 @@ def showDialog(dialog, dInst=True, dockable=False, *args):
         if pm.workspaceControl(control, q=True, exists=True):
             pm.workspaceControl(control, e=True, close=True)
             pm.deleteUI(control, control=True)
-
-    windw.move(QtWidgets.QApplication.desktop().screen().rect().center()
-               - windw.rect().center())
+    desktop = QtWidgets.QApplication.desktop()
+    screen = desktop.screen()
+    screen_center = screen.rect().center()
+    windw_center = windw.rect().center()
+    windw.move(screen_center - windw_center)
 
     # Delete the UI if errors occur to avoid causing winEvent
     # and event errors (in Maya 2014)
