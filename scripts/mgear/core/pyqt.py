@@ -8,7 +8,9 @@ import traceback
 import maya.OpenMayaUI as omui
 import pymel.core as pm
 
-from mgear.vendor.Qt import QtWidgets, QtCompat
+from mgear.vendor.Qt import QtWidgets
+from mgear.vendor.Qt import QtCompat
+from mgear.vendor.Qt import QtGui
 
 UI_EXT = "ui"
 
@@ -203,3 +205,34 @@ def fakeTranslate(*args):
 
     """
     return args[1]
+
+
+# Function borrowed from Cesar Saez QuickLauncher
+def position_window(window):
+    """ set the position for the windonw
+
+    Function borrowed from Cesar Saez QuickLauncher
+    Args:
+        window (QtWidget): the window to position
+    """
+    pos = QtGui.QCursor.pos()
+    window.move(pos.x(), pos.y())
+
+
+def get_main_window(widget=None):
+    """Get the active window
+
+    Function borrowed from Cesar Saez QuickLauncher
+    Args:
+        widget (QtWidget, optional): window
+
+    Returns:
+        QtWidget: parent of the window
+    """
+    widget = widget or QtWidgets.QApplication.activeWindow()
+    if widget is None:
+        return
+    parent = widget.parent()
+    if parent is None:
+        return widget
+    return get_main_window(parent)
