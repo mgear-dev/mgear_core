@@ -1,13 +1,41 @@
 """Custom Pick walk"""
 
+# Maya imports
+from maya import cmds
 import pymel.core as pm
 
+# mGear imports
 from mgear.core import string
 
 
 ##########################################################
-# Utility funcsions
+# Utility functions
 ##########################################################
+def get_all_tag_children(node):
+    """Gets all child tag controls from the given tag node
+
+    Args:
+        node (dagNode): Controller object with tag
+
+    Returns:
+        list: List of child controls (Maya transform nodes)
+    """
+
+    # store child nodes
+    children = []
+
+    # gets first child control
+    child = cmds.controller(node, query=True, children=True)
+
+    # loop on child controller nodes to get all children
+    while child is not None:
+        children.extend(child)
+        tag = cmds.ls(cmds.listConnections(child[0], type="controller"))
+        child = cmds.controller(tag, query=True, children=True)
+
+    return children
+
+
 def getWalkTag(node):
     """Get Controller tag
 
