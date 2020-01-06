@@ -207,7 +207,6 @@ def fakeTranslate(*args):
     return args[1]
 
 
-# Function borrowed from Cesar Saez QuickLauncher
 def position_window(window):
     """ set the position for the windonw
 
@@ -236,3 +235,18 @@ def get_main_window(widget=None):
     if parent is None:
         return widget
     return get_main_window(parent)
+
+
+def get_instance(parent, gui_class):
+    """Get instace of a window from a given parent
+
+    Function borrowed from Cesar Saez QuickLauncher
+    Args:
+        parent (QtWidget): parent
+        gui_class (QtWidget): instance class to check
+
+    """
+    for children in parent.children():
+        if isinstance(children, gui_class):
+            return children
+    return None
