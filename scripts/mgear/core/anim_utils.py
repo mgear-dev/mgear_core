@@ -1,13 +1,16 @@
+
+# Stdlib imports
 import re
 import traceback
 from functools import partial
 
-
+# Maya imports
+from maya import cmds
 import pymel.core as pm
 from pymel import versions
 
+# mGear imports
 import mgear
-
 from mgear.vendor.Qt import QtCore
 from mgear.vendor.Qt import QtWidgets
 from mgear.core import pyqt
@@ -16,7 +19,8 @@ from mgear.core import transform
 from mgear.core import utils
 from mgear.core import attribute
 from mgear.core import vector
-
+from mgear.core.attribute import reset_selected_channels_value
+from mgear.core.pickWalk import get_all_tag_children
 
 # =============================================================================
 # constants
@@ -253,6 +257,29 @@ def selGroup(model, groupSuffix):
     """
     controlers = getControlers(model, groupSuffix)
     pm.select(controlers)
+
+
+def select_all_child_controls(control, *args):  # @unusedVariable
+    """ Selects all child controls from the given control
+
+    This function uses Maya's controller nodes and commands to find relevant
+    dependencies between controls
+
+    Args:
+        control (str): parent animation control (transform node)
+        *args: State of the menu item (if existing) send by mgear's dagmenu
+    """
+
+    # gets controller node from the given control. Returns if none is found
+    tag = cmds.ls(cmds.listConnections(control), type="controller")
+    if not tag:
+        return
+
+    # query child controls
+    children = get_all_tag_children(tag)
+
+    # adds to current selection the children elements
+    cmds.select(children, add=True)
 
 
 def quickSel(model, channel, mouse_button):
@@ -855,6 +882,19 @@ def resetSelTrans():
     with pm.UndoChunk():
         for obj in pm.selected():
             transform.resetTransform(obj)
+
+
+def reset_all_keyable_attributes(dagnodes, *args):  # @unusedVariable
+    """Resets to default values all keyable attributes on the given node
+
+    Args:
+        dagnodes (list): Maya transform nodes to reset
+        *args: State of the menu item (if existing) send by mgear's dagmenu
+    """
+
+    for node in dagnodes:
+        keyable_attrs = cmds.listAttr(node, keyable=True)
+        reset_selected_channels_value([node], keyable_attrs)
 
 
 ##################################################
