@@ -4,11 +4,59 @@ dagmenu mGear module contains all the logic to override Maya's right
 click dag menu.
 """
 
-# imports
+# Stdlib imports
 from __future__ import absolute_import
 from functools import partial
+
+# Maya imports
 from maya import cmds, mel
+import pymel.core as pm
+
+# mGear imports
 import mgear
+from mgear.core.anim_utils import select_all_child_controls
+from mgear.core.anim_utils import reset_all_keyable_attributes
+from mgear.core.pickWalk import get_all_tag_children
+from mgear.core.transform import resetTransform
+from mgear.core.anim_utils import mirrorPose
+
+
+def __change_rotate_order_callback(*args):
+    print(args)
+
+
+def __mirror_flip_pose_callback(*args):
+    """Wrapper function to call mGears mirroPose function
+
+    Args:
+        list: callback from menuItem
+    """
+
+    # cast controls into pymel object nodes
+    controls = [pm.PyNode(x) for x in args[0]]
+
+    # triggers mirror
+    mirrorPose(flip=args[1], nodes=controls)
+
+
+def __reset_attributes_callback(*args):
+    """ Wrapper function to call mGears resetTransform function
+
+    Args:
+        list: callback from menuItem
+    """
+
+    attribute = args[1]
+
+    for node in args[0]:
+        control = pm.PyNode(node)
+
+        if attribute == "translate":
+            resetTransform(control, t=True, r=False, s=False)
+        if attribute == "rotate":
+            resetTransform(control, t=False, r=True, s=False)
+        if attribute == "scale":
+            resetTransform(control, t=False, r=False, s=True)
 
 
 def get_option_var_state():
@@ -58,7 +106,7 @@ def install():
     run(state)
 
 
-def mgear_dag_menu_callback(*args, **kwargs):  # @UnusedVariable
+def mgear_dagmenu_callback(*args, **kwargs):  # @UnusedVariable
     """ Triggers dag menu display
 
     If selection is ends with **_ctl** then display mGear's contextual menu.
@@ -79,15 +127,110 @@ def mgear_dag_menu_callback(*args, **kwargs):  # @UnusedVariable
     # the override
     if type(args[1]) != bool:
         sel = cmds.ls(selection=True, long=True, exactType="transform")
-        if sel and sel[0].endswith("_ctl"):
-            cmds.menu(parent_menu.replace('"', ''), edit=True,
-                      deleteAllItems=True)
-            cmds.menuItem(parent=parent_menu.replace('"', ''), label="test me")
+        if sel and cmds.objExists("{}.isCtl".format(sel[0])):
+            # cleans menu
+            _parent_menu = parent_menu.replace('"', '')
+            cmds.menu(_parent_menu, edit=True, deleteAllItems=True)
+
+            # fills menu
+            mgear_dagmenu_fill(_parent_menu, sel[0])
         else:
             mel.eval("buildObjectMenuItemsNow " + parent_menu)
 
     # always return parent menu path
     return parent_menu
+
+
+def mgear_dagmenu_fill(parent_menu, current_control):
+    """Fill the given menu with mGear's custom animation menu
+
+    Args:
+        parent_menu(str): Parent Menu path name
+        current_control(str): current selected mGear control
+    """
+
+    # gets current selection to use later on
+    _current_selection = cmds.ls(selection=True)
+
+    # get child controls
+    child_controls = (get_all_tag_children(cmds.ls(cmds.listConnections(
+                      current_control), type="controller")))
+    child_controls.append(current_control)
+
+    # select all function
+    cmds.menuItem(parent=parent_menu, label="Select child controls",
+                  command=partial(select_all_child_controls, current_control),
+                  image="selectByHierarchy.png")
+
+    # divider
+    cmds.menuItem(parent=parent_menu, divider=True)
+
+    # reset selected
+    cmds.menuItem(parent=parent_menu, label="Reset",
+                  command=partial(reset_all_keyable_attributes,
+                                  _current_selection))
+
+    # reset all bellow
+    cmds.menuItem(parent=parent_menu, label="Reset all bellow",
+                  command=partial(reset_all_keyable_attributes,
+                                  child_controls))
+
+    # add transform resets
+    k_attrs = cmds.listAttr(current_control, keyable=True)
+    for attr in ("translate", "rotate", "scale"):
+        if [x for x in k_attrs if attr in x]:
+            icon = "{}_M.png".format(attr)
+            if attr == "translate":
+                icon = "move_M.png"
+            cmds.menuItem(parent=parent_menu, label="Reset {}".format(attr),
+                          command=partial(__reset_attributes_callback,
+                                          _current_selection, attr),
+                          image=icon)
+
+    # divider
+    cmds.menuItem(parent=parent_menu, divider=True)
+
+    # add mirror
+    cmds.menuItem(parent=parent_menu, label="Mirror",
+                  command=partial(__mirror_flip_pose_callback,
+                                  _current_selection,
+                                  False))
+    cmds.menuItem(parent=parent_menu, label="Mirror all bellow",
+                  command=partial(__mirror_flip_pose_callback,
+                                  child_controls,
+                                  False))
+
+    # add flip
+    cmds.menuItem(parent=parent_menu, label="Flip",
+                  command=partial(__mirror_flip_pose_callback,
+                                  _current_selection,
+                                  True))
+    cmds.menuItem(parent=parent_menu, label="Flip all bellow",
+                  command=partial(__mirror_flip_pose_callback,
+                                  child_controls,
+                                  True))
+
+    # divider
+    cmds.menuItem(parent=parent_menu, divider=True)
+
+    # rotate order
+    if [x for x in k_attrs if "rotateOrder" in x]:
+        _current_r_order = cmds.getAttr("{}.rotateOrder"
+                                        .format(current_control))
+        _rot_men = cmds.menuItem(parent=parent_menu,
+                                 subMenu=True, tearOff=False,
+                                 label="Rotate Order switch")
+        cmds.radioMenuItemCollection(parent=_rot_men)
+        orders = ("xyz", "yzx", "zxy", "xzy", "yxz", "zyx")
+        for idx, order in enumerate(orders):
+            if idx == _current_r_order:
+                cmds.menuItem(parent=_rot_men, label=order, radioButton=True,
+                              command=partial(__change_rotate_order_callback,
+                                              orders[_current_r_order], order))
+            else:
+                cmds.menuItem(parent=_rot_men, label=order, radioButton=False,
+                              command=partial(__change_rotate_order_callback,
+                                              orders[_current_r_order], order))
 
 
 def mgear_dagmenu_toggle(state):
@@ -116,7 +259,7 @@ def mgear_dagmenu_toggle(state):
                 parent_menu = menu_cmd.split(" ")[-1]
                 # Override dag menu with custom command call
                 cmds.menu(maya_menu, edit=True, postMenuCommand=partial(
-                          mgear_dag_menu_callback, parent_menu))
+                          mgear_dagmenu_callback, parent_menu))
 
         # If state is set to False then put back Maya's dag menu
         # This is tricky because Maya's default menu command is a MEL call
@@ -127,7 +270,7 @@ def mgear_dagmenu_toggle(state):
             # we now check if the command override is one from us
             # here because we override original function we need
             # to get the function name by using partial.func
-            if "mgear_dag_menu_callback" in menu_cmd.func.__name__:
+            if "mgear_dagmenu_callback" in menu_cmd.func.__name__:
                 # we call the mGear_dag_menu_callback with the future state
                 # this will return the original menu parent so that we
                 # can put Maya's original dag menu command in mel
