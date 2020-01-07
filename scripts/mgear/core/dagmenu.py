@@ -19,10 +19,20 @@ from mgear.core.anim_utils import reset_all_keyable_attributes
 from mgear.core.pickWalk import get_all_tag_children
 from mgear.core.transform import resetTransform
 from mgear.core.anim_utils import mirrorPose
+from mgear.core.anim_utils import get_host_from_node
+from mgear.core.anim_utils import change_rotate_order
+from mgear.core.anim_utils import ikFkMatch
 
 
 def __change_rotate_order_callback(*args):
-    print(args)
+    """Wrapper function to call mGears change rotate order function
+
+    Args:
+        list: callback from menuItem
+    """
+
+    # triggers rotate order change
+    change_rotate_order(args[0], args[1])
 
 
 def __mirror_flip_pose_callback(*args):
@@ -57,6 +67,68 @@ def __reset_attributes_callback(*args):
             resetTransform(control, t=False, r=True, s=False)
         if attribute == "scale":
             resetTransform(control, t=False, r=False, s=True)
+
+
+def __select_host_callback(*args):
+    """ Wrapper function to call mGears select host
+
+    Args:
+        list: callback from menuItem
+    """
+
+    cmds.select(get_host_from_node(args[0]))
+
+
+def __switch_fkik_callback(*args):
+    """ Wrapper function to call mGears switch fk/ik snap function
+
+    Args:
+        list: callback from menuItem
+    """
+
+    switch_control = args[0].split("|")[-1].split(":")[-1]
+    keyframe = args[1]
+    blend_attr = args[2]
+
+    # gets root node for the given control
+    root = cmds.ls(args[0], long=True)[0].split("|")[1]
+
+    # first find controls from the ui host control
+    ik_controls = {"ik_control": None,
+                   "pole_vector": None,
+                   "ik_rot": None
+                   }
+    fk_controls = []
+
+    # loops through connections
+    for i in cmds.listConnections("{}.{}".format(args[0], blend_attr)):
+        if (cmds.objExists("{}.isCtl".format(i)) and i not in ik_controls
+                and "ik" in i or "upv" in i):
+            control_type = i.split(":")[-1].split("_")[-2]
+            if control_type == "ik":
+                ik_controls["ik_control"] = i.split(":")[-1]
+            elif control_type == "upv":
+                ik_controls["pole_vector"] = i.split(":")[-1]
+            elif control_type == "ikRot":
+                ik_controls["ik_rot"] = i.split(":")[-1]
+
+        elif cmds.objectType(i) == "reverse":
+            for x in cmds.listConnections(i):
+                if (cmds.objExists("{}.isCtl".format(x))
+                        and x not in fk_controls and "fk" in x):
+                    fk_controls.append(x.split(":")[-1])
+
+    fk_controls = sorted(fk_controls)
+
+    # runs switch
+    ikFkMatch(model=root,
+              ikfk_attr=blend_attr,
+              ui_host=switch_control,
+              fks=fk_controls,
+              ik=ik_controls["ik_control"],
+              upv=ik_controls["pole_vector"],
+              ik_rot=ik_controls["ik_rot"],
+              key=keyframe)
 
 
 def get_option_var_state():
@@ -152,6 +224,41 @@ def mgear_dagmenu_fill(parent_menu, current_control):
     # gets current selection to use later on
     _current_selection = cmds.ls(selection=True)
 
+    # handles ik fk blend attributes
+    for attr in cmds.listAttr(current_control,
+                              userDefined=True,
+                              keyable=True) or []:
+        if not attr.endswith("_blend"):
+            continue
+        # found attribute so get current state
+        current_state = cmds.getAttr("{}.{}".format(current_control, attr))
+        states = {0: "Fk",
+                  1: "Ik"}
+
+        rvs_state = states[int(not(current_state))]
+
+        cmds.menuItem(parent=parent_menu, label="Switch {} to {}"
+                      .format(attr.split("_blend")[0], rvs_state),
+                      command=partial(__switch_fkik_callback, current_control,
+                                      False, attr),
+                      image="HIKcreateControlRig.png")
+
+        cmds.menuItem(parent=parent_menu, label="Switch {} to {} + Key"
+                      .format(attr.split("_blend")[0], rvs_state),
+                      command=partial(__switch_fkik_callback, current_control,
+                                      True, attr),
+                      image="HIKcreateControlRig.png")
+
+        # divider
+        cmds.menuItem(parent=parent_menu, divider=True)
+
+    # check is given control is an mGear control
+    if cmds.objExists("{}.uiHost".format(current_control)):
+        # select ui host
+        cmds.menuItem(parent=parent_menu, label="Select host",
+                      command=partial(__select_host_callback, current_control),
+                      image="parent.png")
+
     # get child controls
     child_controls = (get_all_tag_children(cmds.ls(cmds.listConnections(
                       current_control), type="controller")))
@@ -224,13 +331,12 @@ def mgear_dagmenu_fill(parent_menu, current_control):
         orders = ("xyz", "yzx", "zxy", "xzy", "yxz", "zyx")
         for idx, order in enumerate(orders):
             if idx == _current_r_order:
-                cmds.menuItem(parent=_rot_men, label=order, radioButton=True,
-                              command=partial(__change_rotate_order_callback,
-                                              orders[_current_r_order], order))
+                state = True
             else:
-                cmds.menuItem(parent=_rot_men, label=order, radioButton=False,
-                              command=partial(__change_rotate_order_callback,
-                                              orders[_current_r_order], order))
+                state = False
+            cmds.menuItem(parent=_rot_men, label=order, radioButton=state,
+                          command=partial(__change_rotate_order_callback,
+                                          current_control, order))
 
 
 def mgear_dagmenu_toggle(state):
