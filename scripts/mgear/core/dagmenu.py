@@ -285,7 +285,8 @@ def mgear_dagmenu_fill(parent_menu, current_control):
     # add transform resets
     k_attrs = cmds.listAttr(current_control, keyable=True)
     for attr in ("translate", "rotate", "scale"):
-        if [x for x in k_attrs if attr in x]:
+        # checks if the attribute is a maya transform attribute
+        if [x for x in k_attrs if attr in x and len(x) == len(attr) + 1]:
             icon = "{}_M.png".format(attr)
             if attr == "translate":
                 icon = "move_M.png"
