@@ -49,6 +49,16 @@ def __mirror_flip_pose_callback(*args):
     mirrorPose(flip=args[1], nodes=controls)
 
 
+def __range_switch_callback(*args):
+    """ Wrapper function to call mGears range fk/ik switch function
+
+    Args:
+        list: callback from menuItem
+    """
+
+    cmds.warning("Not implemented wet!")
+
+
 def __reset_attributes_callback(*args):
     """ Wrapper function to call mGears resetTransform function
 
@@ -248,6 +258,10 @@ def mgear_dagmenu_fill(parent_menu, current_control):
                       command=partial(__switch_fkik_callback, current_control,
                                       True, attr),
                       image="HIKcreateControlRig.png")
+
+        cmds.menuItem(parent=parent_menu, label="Range switch",
+                      command=partial(__range_switch_callback, current_control,
+                                      True, attr))
 
         # divider
         cmds.menuItem(parent=parent_menu, divider=True)
