@@ -28,7 +28,6 @@ from mgear.core.pickWalk import get_all_tag_children
 EXPR_LEFT_SIDE = re.compile("L(\d+)")
 EXPR_RIGHT_SIDE = re.compile("R(\d+)")
 
-
 CTRL_GRP_SUFFIX = "_controllers_grp"
 PLOT_GRP_SUFFIX = "_PLOT_grp"
 
@@ -157,6 +156,21 @@ def getControlers(model, gSuffix=CTRL_GRP_SUFFIX):
         return members
     except TypeError:
         return None
+
+
+def get_host_from_node(control):
+    """Returns the host control name from the given control
+    Args:
+        control (str): Rig control
+
+    Returns:
+        str: Host UI control name
+    """
+
+    # get host control
+    namespace = getNamespace(control).split("|")[-1]
+    host = cmds.getAttr("{}.uiHost".format(control))
+    return "{}:{}".format(namespace, host)
 
 
 def getNamespace(modelName):
@@ -466,6 +480,98 @@ def changeSpace(model, object_name, combo_attr, cnsIndex, ctl_name):
     ctl.setMatrix(sWM, worldSpace=True)
 
 
+def change_rotate_order(control, target_order):
+    """Change current control rotate order on all frames
+
+    Args:
+        control (str): control to interact on
+        target_order (str): target rotate order
+    """
+
+    if len(target_order) != 3:
+        raise AttributeError("Your target rotate order is not valid. "
+                             "Please use any of the following: "
+                             "xyz, yzx, zxy, xzy, yxz, zyx")
+
+    if not cmds.getAttr("{}.rotateOrder".format(control), settable=True):
+        raise RuntimeError("RotateOrder is locked on the given control")
+
+    # Maya's rotate order's index
+    rotate_orders = {"xyz": 0,
+                     "yzx": 1,
+                     "zxy": 2,
+                     "xzy": 3,
+                     "yxz": 4,
+                     "zyx": 5
+                     }
+
+    # gets current control rotate order
+    current_order = cmds.getAttr("{}.rotateOrder".format(control))
+
+    # do nothing if target rotate order is the same as current one
+    if current_order == rotate_orders[target_order]:
+        return
+
+    # gets anim curves on rotation values
+    anim_curves = []
+    for axe in ["x", "y", "z"]:
+        anim_curves.extend(cmds.listConnections("{}.r{}".format(control, axe),
+                                                type="animCurve") or [])
+
+    # gets keyframe on rotateOrder attribute if any
+    rotate_order_anim = cmds.listConnections("{}.rotateOrder".format(control),
+                                             type="animCurve") or []
+
+    # get unique timeline values for all rotate keyframe
+    frames = []
+    for node in anim_curves:
+        [frames.append(x)
+         for x in cmds.keyframe(node, query=True, controlPoints=True)
+         if x not in frames]
+
+    # pauses viewport update
+    current_frame = cmds.currentTime(query=True)
+    if not cmds.ogs(query=True, pause=True):
+        cmds.ogs(pause=True)
+
+    # stores matrix position of your control for each frame
+    positions = {}
+    holder = cmds.createNode("transform", name="{}_rotate_order_switch"
+                             .format(control.split("|")[-1]))
+    cmds.setAttr("{}.rotateOrder".format(holder, rotate_orders[target_order]))
+    for frame in frames:
+        cmds.currentTime(frame)
+        position = cmds.xform(control, query=True, worldSpace=True,
+                              matrix=True)
+        cmds.xform(holder, worldSpace=True, matrix=position)
+        positions[frame] = cmds.xform(holder, query=True, worldSpace=True,
+                                      matrix=True)
+
+    # change rotate order
+    if rotate_order_anim:
+        cmds.keyframe(rotate_order_anim, edit=True,
+                      valueChange=rotate_orders[target_order])
+    else:
+        cmds.setAttr("{}.rotateOrder".format(control),
+                     rotate_orders[target_order])
+
+    for frame in frames:
+        cmds.currentTime(frame)
+        cmds.xform(control, worldSpace=True, matrix=positions[frame])
+
+    # filters curves
+    cmds.filterCurve(anim_curves)
+
+    # deletes holder and set back the good timeline value
+    cmds.delete(holder)
+    cmds.currentTime(current_frame)
+
+    # un-pauses viewport
+    if cmds.ogs(query=True, pause=True):
+        cmds.ogs(pause=True)
+
+    cmds.select(control)
+
 ##################################################
 # Combo Box
 ##################################################
@@ -500,7 +606,7 @@ def getComboKeys(model, object_name, combo_attr):
 # ================================================
 
 
-def ikFkMatch(model, ikfk_attr, uiHost_name, fks, ik, upv, ikRot=None):
+def ikFkMatch(model, ikfk_attr, ui_host, fks, ik, upv, ik_rot=None, key=None):
     """Switch IK/FK with matching functionality
 
     This function is meant to work with 2 joint limbs.
@@ -509,73 +615,105 @@ def ikFkMatch(model, ikfk_attr, uiHost_name, fks, ik, upv, ikRot=None):
     Args:
         model (PyNode): Rig top transform node
         ikfk_attr (str): Blend ik fk attribute name
-        uiHost_name (str): Ui host name
+        ui_host (str): Ui host name
         fks ([str]): List of fk controls names
         ik (str): Ik control name
         upv (str): Up vector control name
         ikRot (None, str): optional. Name of the Ik Rotation control
+        key (None, bool): optional. Whether we do an snap with animation
     """
-    nameSpace = getNamespace(model)
 
-    def _getNode(name):
+    # gets namespace
+    current_namespace = getNamespace(model)
+
+    # returns a pymel node on the given name
+    def _get_node(name):
         # type: (str) -> pm.nodetypes.Transform
-        node = getNode(":".join([nameSpace, name]))
+        node = getNode(":".join([current_namespace, name]))
 
         if not node:
             mgear.log("Can't find object : {0}".format(name), mgear.sev_error)
 
         return node
 
-    def _getMth(name):
+    # returns matching node
+    def _get_mth(name):
         # type: (str) -> pm.nodetypes.Transform
         tmp = name.split("_")
         tmp[-1] = "mth"
-        return _getNode("_".join(tmp))
+        return _get_node("_".join(tmp))
 
-    fkCtrls = [_getNode(x) for x in fks]
-    fkTargets = [_getMth(x) for x in fks]
+    # get things ready
+    fk_ctrls = [_get_node(x) for x in fks]
+    fk_targets = [_get_mth(x) for x in fks]
+    ik_ctrl = _get_node(ik)
+    ik_target = _get_mth(ik)
+    upv_ctrl = _get_node(upv)
 
-    ikCtrl = _getNode(ik)
-    ikTarget = _getMth(ik)
+    if ik_rot:
+        ik_rot_node = _get_node(ik_rot)
+        ik_rot_target = _get_mth(ik_rot)
 
-    upvCtrl = _getNode(upv)
-    upvTarget = _getMth(upv)
+    ui_node = _get_node(ui_host)
+    o_attr = ui_node.attr(ikfk_attr)
+    val = o_attr.get()
 
-    if ikRot:
-        ikRotNode = _getNode(ikRot)
-        ikRotTarget = _getMth(ikRot)
+    # sets keyframes before snapping
+    if key:
+        _all_controls = []
+        _all_controls.extend(fk_ctrls)
+        _all_controls.extend([ik_ctrl, upv_ctrl, ui_node])
+        if ik_rot:
+            _all_controls.extend([ik_rot_node])
+        [cmds.setKeyframe("{}".format(elem),
+                          time=(cmds.currentTime(query=True) - 1.0))
+         for elem in _all_controls]
 
-    uiNode = _getNode(uiHost_name)
-    oAttr = uiNode.attr(ikfk_attr)
-    val = oAttr.get()
-
-    # if is IKw
+    # if is IKw then snap FK
     if val == 1.0:
 
-        for target, ctl in zip(fkTargets, fkCtrls):
+        for target, ctl in zip(fk_targets, fk_ctrls):
             transform.matchWorldTransform(target, ctl)
 
-        oAttr.set(0.0)
+        o_attr.set(0.0)
 
-    # if is FK
+    # if is FKw then sanp IK
     elif val == 0.0:
+        transform.matchWorldTransform(ik_target, ik_ctrl)
+        if ik_rot:
+            transform.matchWorldTransform(ik_rot_target, ik_rot_node)
 
-        transform.matchWorldTransform(ikTarget, ikCtrl)
-        if ikRot:
-            transform.matchWorldTransform(ikRotTarget, ikRotNode)
+        transform.matchWorldTransform(fk_targets[1], upv_ctrl)
+        # calculates new pole vector position
+        start_end = (fk_targets[-1].getTranslation(space="world") -
+                     fk_targets[0].getTranslation(space="world"))
+        start_mid = (fk_targets[1].getTranslation(space="world") -
+                     fk_targets[0].getTranslation(space="world"))
 
-        transform.matchWorldTransform(upvTarget, upvCtrl)
-        oAttr.set(1.0)
+        dot_p = start_mid * start_end
+        proj = float(dot_p) / float(start_end.length())
+        proj_vector = start_end.normal() * proj
+        arrow_vector = start_mid - proj_vector
+        arrow_vector *= start_end.normal().length()
+        final_vector = (arrow_vector +
+                        fk_targets[1].getTranslation(space="world"))
+        upv_ctrl.setTranslation(final_vector, space="world")
 
-        roll_att = uiNode.attr(ikfk_attr.replace("blend", "roll"))
+        # sets blend attribute new value
+        o_attr.set(1.0)
+        roll_att = ui_node.attr(ikfk_attr.replace("blend", "roll"))
         roll_att.set(0.0)
+
+    # sets keyframes
+    if key:
+        [cmds.setKeyframe("{}".format(elem),
+                          time=(cmds.currentTime(query=True)))
+         for elem in _all_controls]
 
 
 # ==============================================================================
 # spine ik/fk matching/switching
 # ==============================================================================
-
-
 def spine_IKToFK(fkControls, ikControls, matchMatrix_dict=None):
     """position the IK controls to match, as best they can, the fk controls.
     Supports component: spine_S_shape_01, spine_ik_02
