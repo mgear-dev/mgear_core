@@ -238,7 +238,9 @@ def mgear_dagmenu_fill(parent_menu, current_control):
     for attr in cmds.listAttr(current_control,
                               userDefined=True,
                               keyable=True) or []:
-        if not attr.endswith("_blend"):
+        if (not attr.endswith("_blend")
+            or cmds.addAttr("{}.{}".format(current_control, attr),
+                            query=True, usedAsProxy=True)):
             continue
         # found attribute so get current state
         current_state = cmds.getAttr("{}.{}".format(current_control, attr))
