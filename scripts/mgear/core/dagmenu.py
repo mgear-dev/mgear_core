@@ -22,6 +22,8 @@ from mgear.core.anim_utils import mirrorPose
 from mgear.core.anim_utils import get_host_from_node
 from mgear.core.anim_utils import change_rotate_order
 from mgear.core.anim_utils import ikFkMatch
+from mgear.core.anim_utils import get_ik_fk_controls
+from mgear.core.anim_utils import IkFkTransfer
 
 
 def __change_rotate_order_callback(*args):
@@ -56,7 +58,50 @@ def __range_switch_callback(*args):
         list: callback from menuItem
     """
 
-    cmds.warning("Not implemented wet!")
+    # instance for the range switch util
+    range_switch = IkFkTransfer()
+
+    switch_control = args[0].split("|")[-1].split(":")[-1]
+    blend_attr = args[1]
+
+    # gets root node for the given control
+    root = cmds.ls(args[0], long=True)[0].split("|")[1]
+
+    # first find controls from the ui host control
+    ik_fk_controls = get_ik_fk_controls(args[0], blend_attr)
+
+    # organise ik controls
+    ik_controls = {"ik_control": None,
+                   "pole_vector": None,
+                   "ik_rot": None
+                   }
+
+    # removes namespace from controls and order them in something usable
+    # by the ikFkMatch function
+
+    # - IKS
+    for x in ik_fk_controls["ik_controls"]:
+        control_name = x.split(":")[-1]
+        control_type = control_name.split("_")[-2]
+        if control_type == "ik":
+            ik_controls["ik_control"] = control_name
+        elif control_type == "upv":
+            ik_controls["pole_vector"] = control_name
+        elif control_type == "ikRot":
+            ik_controls["ik_rot"] = control_name
+
+    # - FKS
+    fk_controls = [x.split(":")[-1] for x in ik_fk_controls["fk_controls"]]
+    fk_controls = sorted(fk_controls)
+
+    # calls the ui
+    range_switch.showUI(model=root,
+                        ikfk_attr=blend_attr,
+                        uihost=switch_control,
+                        fks=fk_controls,
+                        ik=ik_controls["ik_control"],
+                        upv=ik_controls["pole_vector"],
+                        ikRot=ik_controls["ik_rot"])
 
 
 def __reset_attributes_callback(*args):
@@ -104,30 +149,30 @@ def __switch_fkik_callback(*args):
     root = cmds.ls(args[0], long=True)[0].split("|")[1]
 
     # first find controls from the ui host control
+    ik_fk_controls = get_ik_fk_controls(args[0], blend_attr)
+
+    # organise ik controls
     ik_controls = {"ik_control": None,
                    "pole_vector": None,
                    "ik_rot": None
                    }
-    fk_controls = []
 
-    # loops through connections
-    for i in cmds.listConnections("{}.{}".format(args[0], blend_attr)):
-        if (cmds.objExists("{}.isCtl".format(i)) and i not in ik_controls
-                and "ik" in i or "upv" in i):
-            control_type = i.split(":")[-1].split("_")[-2]
-            if control_type == "ik":
-                ik_controls["ik_control"] = i.split(":")[-1]
-            elif control_type == "upv":
-                ik_controls["pole_vector"] = i.split(":")[-1]
-            elif control_type == "ikRot":
-                ik_controls["ik_rot"] = i.split(":")[-1]
+    # removes namespace from controls and order them in something usable
+    # by the ikFkMatch function
 
-        elif cmds.objectType(i) == "reverse":
-            for x in cmds.listConnections(i):
-                if (cmds.objExists("{}.isCtl".format(x))
-                        and x not in fk_controls and "fk" in x):
-                    fk_controls.append(x.split(":")[-1])
+    # - IKS
+    for x in ik_fk_controls["ik_controls"]:
+        control_name = x.split(":")[-1]
+        control_type = control_name.split("_")[-2]
+        if control_type == "ik":
+            ik_controls["ik_control"] = control_name
+        elif control_type == "upv":
+            ik_controls["pole_vector"] = control_name
+        elif control_type == "ikRot":
+            ik_controls["ik_rot"] = control_name
 
+    # - FKS
+    fk_controls = [x.split(":")[-1] for x in ik_fk_controls["fk_controls"]]
     fk_controls = sorted(fk_controls)
 
     # runs switch
@@ -263,7 +308,7 @@ def mgear_dagmenu_fill(parent_menu, current_control):
 
         cmds.menuItem(parent=parent_menu, label="Range switch",
                       command=partial(__range_switch_callback, current_control,
-                                      True, attr))
+                                      attr))
 
         # divider
         cmds.menuItem(parent=parent_menu, divider=True)
