@@ -158,40 +158,33 @@ def getControlers(model, gSuffix=CTRL_GRP_SUFFIX):
         return None
 
 
-def get_ik_fk_controls(control, blend_attribute):
+def get_ik_fk_controls(control):
     """ Returns the ik and fk controls related to the given control blend attr
 
     Args:
-        control (str): control to interact with
-        blend_attribute (str): name of the switching attribute
+        control (str): uihost control to interact with
 
     Returns:
         dict: fk and ik controls list on a dict
-
-    .. warning:: This might need refactor if shifter components visibility
-                 method from the blend attribute changes.
     """
 
     ik_fk_controls = {"fk_controls": [],
                       "ik_controls": []}
 
-    # with parse de direct connections on the blend attribute and search
-    # for the controls.
-    for i in cmds.listConnections("{}.{}".format(control, blend_attribute)):
+    controls_attribute = control.replace("UI", "")
+    controls = cmds.getAttr("{}.{}".format(control, controls_attribute))
 
+    # filters the controls
+    for ctl in controls.split(","):
+        if len(ctl) == 0:
+            continue
+        ctl_type = ctl.split("_")[2]
         # filters ik controls
-        if (cmds.objExists("{}.isCtl".format(i))
-                and i not in ik_fk_controls["ik_controls"]):
-            if "ik" in i or "upv" in i:
-                ik_fk_controls["ik_controls"].append(i)
-
+        if "ik" in ctl_type or "upv" in ctl_type:
+            ik_fk_controls["ik_controls"].append(ctl)
         # filters fk controls
-        elif cmds.objectType(i) == "reverse":
-            for x in cmds.listConnections(i):
-                if (cmds.objExists("{}.isCtl".format(x))
-                        and x not in ik_fk_controls["fk_controls"]
-                        and "fk" in x):
-                    ik_fk_controls["fk_controls"].append(x)
+        elif "fk" in ctl_type:
+            ik_fk_controls["fk_controls"].append(ctl)
 
     return ik_fk_controls
 

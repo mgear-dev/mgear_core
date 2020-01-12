@@ -8,8 +8,12 @@ click dag menu.
 from __future__ import absolute_import
 from functools import partial
 
+# PySide imports
+from PySide2 import QtWidgets
+from shiboken2 import wrapInstance
+
 # Maya imports
-from maya import cmds, mel
+from maya import cmds, mel, OpenMayaUI
 import pymel.core as pm
 
 # mGear imports
@@ -24,6 +28,7 @@ from mgear.core.anim_utils import change_rotate_order
 from mgear.core.anim_utils import ikFkMatch
 from mgear.core.anim_utils import get_ik_fk_controls
 from mgear.core.anim_utils import IkFkTransfer
+from mgear.core.anim_utils import changeSpace
 
 
 def __change_rotate_order_callback(*args):
@@ -68,7 +73,7 @@ def __range_switch_callback(*args):
     root = cmds.ls(args[0], long=True)[0].split("|")[1]
 
     # first find controls from the ui host control
-    ik_fk_controls = get_ik_fk_controls(args[0], blend_attr)
+    ik_fk_controls = get_ik_fk_controls(switch_control)
 
     # organise ik controls
     ik_controls = {"ik_control": None,
@@ -149,7 +154,7 @@ def __switch_fkik_callback(*args):
     root = cmds.ls(args[0], long=True)[0].split("|")[1]
 
     # first find controls from the ui host control
-    ik_fk_controls = get_ik_fk_controls(args[0], blend_attr)
+    ik_fk_controls = get_ik_fk_controls(switch_control)
 
     # organise ik controls
     ik_controls = {"ik_control": None,
@@ -184,6 +189,63 @@ def __switch_fkik_callback(*args):
               upv=ik_controls["pole_vector"],
               ik_rot=ik_controls["ik_rot"],
               key=keyframe)
+
+
+def __switch_parent_callback(*args):
+    """ Wrapper function to call mGears change space function
+
+    Args:
+        list: callback from menuItem
+    """
+
+    # creates a map for non logical components controls
+    control_map = {"elbow": "mid",
+                   "rot": "orbit",
+                   "knee": "mid"}
+
+    switch_control = args[0].split("|")[-1].split(":")[-1]
+    switch_attr = args[1]
+    switch_idx = args[2]
+    search_token = switch_attr.split("_")[-1].split("ref")[0].split("Ref")[0]
+    target_control = None
+    controls_attr = "{}_{}_{}".format(switch_attr.split("_")[0],
+                                      switch_control.split("_")[1],
+                                      switch_control.split("_")[2])
+    _controls = cmds.getAttr("{}.{}".format(switch_control, controls_attr))
+
+    # search for target control
+    for ctl in _controls.split(","):
+        if len(ctl) == 0:
+            continue
+        if ctl.split("_")[2] == search_token:
+            target_control = ctl
+            break
+        elif (search_token in control_map.keys()
+              and ctl.split("_")[2] == control_map[search_token]):
+            target_control = ctl
+            break
+
+    # gets root node for the given control
+    root = cmds.ls(args[0], long=True)[0].split("|")[1]
+
+    if not target_control:
+        return
+
+    autokey = cmds.listConnections("{}.{}".format(switch_control, switch_attr),
+                                   type="animCurve")
+
+    if autokey:
+        cmds.setKeyframe(target_control, "{}.{}"
+                         .format(switch_control, switch_attr),
+                         time=(cmds.currentTime(query=True) - 1.0))
+
+    # triggers switch
+    changeSpace(root, switch_control, switch_attr, switch_idx, target_control)
+
+    if autokey:
+        cmds.setKeyframe(target_control, "{}.{}"
+                         .format(switch_control, switch_attr),
+                         time=(cmds.currentTime(query=True)))
 
 
 def get_option_var_state():
@@ -399,6 +461,40 @@ def mgear_dagmenu_fill(parent_menu, current_control):
             cmds.menuItem(parent=_rot_men, label=order, radioButton=state,
                           command=partial(__change_rotate_order_callback,
                                           current_control, order))
+
+    # divider
+    cmds.menuItem(parent=parent_menu, divider=True)
+
+    # handles constrains attributes (constrain switches)
+    for attr in cmds.listAttr(current_control,
+                              userDefined=True,
+                              keyable=True) or []:
+
+        # filters switch reference attributes
+        if (cmds.addAttr("{}.{}".format(current_control, attr),
+                         query=True, usedAsProxy=True)
+                or not attr.endswith("ref")
+                and not attr.endswith("Ref")):
+            continue
+
+        part, ctl = attr.split("Ref")[0].split("ref")[0].split("_")
+        _p_switch_menu = cmds.menuItem(parent=parent_menu, subMenu=True,
+                                       tearOff=False, label="Parent {} {}"
+                                       .format(part, ctl))
+        cmds.radioMenuItemCollection(parent=_p_switch_menu)
+        k_values = cmds.addAttr("{}.{}".format(current_control, attr),
+                                query=True, enumName=True).split(":")
+        current_state = cmds.getAttr("{}.{}".format(current_control, attr))
+
+        for idx, k_val in enumerate(k_values):
+            if idx == current_state:
+                state = True
+            else:
+                state = False
+            cmds.menuItem(parent=_p_switch_menu, label=k_val,
+                          radioButton=state,
+                          command=partial(__switch_parent_callback,
+                                          current_control, attr, idx, k_val))
 
 
 def mgear_dagmenu_toggle(state):
