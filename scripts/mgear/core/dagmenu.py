@@ -8,12 +8,8 @@ click dag menu.
 from __future__ import absolute_import
 from functools import partial
 
-# PySide imports
-from PySide2 import QtWidgets
-from shiboken2 import wrapInstance
-
 # Maya imports
-from maya import cmds, mel, OpenMayaUI
+from maya import cmds, mel
 import pymel.core as pm
 
 # mGear imports
@@ -42,6 +38,16 @@ def __change_rotate_order_callback(*args):
     change_rotate_order(args[0], args[1])
 
 
+def __keyframe_nodes_callback(*args):
+    """Wrapper function to call Maya's setKeyframe command on given controls
+
+    Args:
+        list: callback from menuItem
+    """
+
+    cmds.setKeyframe(args[0])
+
+
 def __mirror_flip_pose_callback(*args):
     """Wrapper function to call mGears mirroPose function
 
@@ -53,7 +59,11 @@ def __mirror_flip_pose_callback(*args):
     controls = [pm.PyNode(x) for x in args[0]]
 
     # triggers mirror
-    mirrorPose(flip=args[1], nodes=controls)
+    for ctl in controls:
+        try:
+            mirrorPose(flip=args[1], nodes=[ctl])
+        except pm.MayaAttributeError:
+            continue
 
 
 def __range_switch_callback(*args):
@@ -137,6 +147,16 @@ def __select_host_callback(*args):
     """
 
     cmds.select(get_host_from_node(args[0]))
+
+
+def __select_nodes_callback(*args):
+    """ Wrapper function to call Maya select command
+
+    Args:
+        list: callback from menuItem
+    """
+
+    cmds.select(args[0], add=True)
 
 
 def __switch_fkik_callback(*args):
@@ -341,6 +361,16 @@ def mgear_dagmenu_fill(parent_menu, current_control):
     # gets current selection to use later on
     _current_selection = cmds.ls(selection=True)
 
+    # get child controls
+    child_controls = []
+    for ctl in _current_selection:
+        [child_controls.append(x)
+         for x in get_all_tag_children(cmds.ls(cmds.listConnections(ctl),
+                                               type="controller"))
+         if x not in child_controls]
+
+    child_controls.append(current_control)
+
     # handles ik fk blend attributes
     for attr in cmds.listAttr(current_control,
                               userDefined=True,
@@ -382,14 +412,9 @@ def mgear_dagmenu_fill(parent_menu, current_control):
                       command=partial(__select_host_callback, current_control),
                       image="parent.png")
 
-    # get child controls
-    child_controls = (get_all_tag_children(cmds.ls(cmds.listConnections(
-                      current_control), type="controller")))
-    child_controls.append(current_control)
-
     # select all function
     cmds.menuItem(parent=parent_menu, label="Select child controls",
-                  command=partial(select_all_child_controls, current_control),
+                  command=partial(__select_nodes_callback, child_controls),
                   image="selectByHierarchy.png")
 
     # divider
@@ -495,6 +520,20 @@ def mgear_dagmenu_fill(parent_menu, current_control):
                           radioButton=state,
                           command=partial(__switch_parent_callback,
                                           current_control, attr, idx, k_val))
+
+    # divider
+    cmds.menuItem(parent=parent_menu, divider=True)
+
+    # select all rig controls
+    selection_set = cmds.ls(cmds.listConnections(current_control),
+                            type="objectSet")
+    all_rig_controls = cmds.sets(selection_set, query=True)
+    cmds.menuItem(parent=parent_menu, label="Select all controls",
+                  command=partial(__select_nodes_callback, all_rig_controls))
+
+    # key all bellow function
+    cmds.menuItem(parent=parent_menu, label="Keyframe child controls",
+                  command=partial(__keyframe_nodes_callback, child_controls))
 
 
 def mgear_dagmenu_toggle(state):
