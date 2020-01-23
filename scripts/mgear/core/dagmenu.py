@@ -556,18 +556,13 @@ def mgear_dagmenu_toggle(state):
         menu_cmd = cmds.menu(maya_menu, query=True, postMenuCommand=True) or []
 
         # If state is set top True then override Maya's dag menu
-        if state and type(menu_cmd) != partial:
-            try:
-              if "buildObjectMenuItemsNow" in menu_cmd:
-                  # Maya's dag menu post command has the parent menu in it
-                  parent_menu = menu_cmd.split(" ")[-1]
-                  # Override dag menu with custom command call
-                  cmds.menu(maya_menu, edit=True, postMenuCommand=partial(
-                            mgear_dagmenu_callback, parent_menu))
-            except TypeError:
-                # sometimes menu_cmd is not iterable and fails.
-                # this is bacause sometimes is  function or partial function
-                pass
+        if state and type(menu_cmd) == unicode:
+            if "buildObjectMenuItemsNow" in menu_cmd:
+                # Maya's dag menu post command has the parent menu in it
+                parent_menu = menu_cmd.split(" ")[-1]
+                # Override dag menu with custom command call
+                cmds.menu(maya_menu, edit=True, postMenuCommand=partial(
+                          mgear_dagmenu_callback, parent_menu))
 
         # If state is set to False then put back Maya's dag menu
         # This is tricky because Maya's default menu command is a MEL call
