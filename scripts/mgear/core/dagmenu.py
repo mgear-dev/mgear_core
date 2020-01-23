@@ -58,11 +58,12 @@ def __mirror_flip_pose_callback(*args):
     controls = [pm.PyNode(x) for x in args[0]]
 
     # triggers mirror
+    # we handle the mirror/flip each control individually even if the function
+    # accepts several controls. Flipping on proxy attributes like blend
+    # attributes cause an issue to rather than trying the complete list we do
+    # one control to avoid the mirror to stop
     for ctl in controls:
-        try:
-            mirrorPose(flip=args[1], nodes=[ctl])
-        except pm.MayaAttributeError:
-            continue
+        mirrorPose(flip=args[1], nodes=[ctl])
 
 
 def __range_switch_callback(*args):
@@ -389,13 +390,13 @@ def mgear_dagmenu_fill(parent_menu, current_control):
                       .format(attr.split("_blend")[0], rvs_state),
                       command=partial(__switch_fkik_callback, current_control,
                                       False, attr),
-                      image="HIKcreateControlRig.png")
+                      image="kinReroot.png")
 
         cmds.menuItem(parent=parent_menu, label="Switch {} to {} + Key"
                       .format(attr.split("_blend")[0], rvs_state),
                       command=partial(__switch_fkik_callback, current_control,
                                       True, attr),
-                      image="HIKcreateControlRig.png")
+                      image="character.svg")
 
         cmds.menuItem(parent=parent_menu, label="Range switch",
                       command=partial(__range_switch_callback, current_control,
@@ -409,12 +410,12 @@ def mgear_dagmenu_fill(parent_menu, current_control):
         # select ui host
         cmds.menuItem(parent=parent_menu, label="Select host",
                       command=partial(__select_host_callback, current_control),
-                      image="parent.png")
+                      image="hotkeySetSettings.png")
 
     # select all function
     cmds.menuItem(parent=parent_menu, label="Select child controls",
                   command=partial(__select_nodes_callback, child_controls),
-                  image="selectByHierarchy.png")
+                  image="dagNode.svg")
 
     # divider
     cmds.menuItem(parent=parent_menu, divider=True)
@@ -422,7 +423,8 @@ def mgear_dagmenu_fill(parent_menu, current_control):
     # reset selected
     cmds.menuItem(parent=parent_menu, label="Reset",
                   command=partial(reset_all_keyable_attributes,
-                                  _current_selection))
+                                  _current_selection),
+                  image="holder.svg")
 
     # reset all bellow
     cmds.menuItem(parent=parent_menu, label="Reset all bellow",
@@ -449,7 +451,8 @@ def mgear_dagmenu_fill(parent_menu, current_control):
     cmds.menuItem(parent=parent_menu, label="Mirror",
                   command=partial(__mirror_flip_pose_callback,
                                   _current_selection,
-                                  False))
+                                  False),
+                  image="redrawPaintEffects.png")
     cmds.menuItem(parent=parent_menu, label="Mirror all bellow",
                   command=partial(__mirror_flip_pose_callback,
                                   child_controls,
@@ -459,7 +462,8 @@ def mgear_dagmenu_fill(parent_menu, current_control):
     cmds.menuItem(parent=parent_menu, label="Flip",
                   command=partial(__mirror_flip_pose_callback,
                                   _current_selection,
-                                  True))
+                                  True),
+                  image="redo.png")
     cmds.menuItem(parent=parent_menu, label="Flip all bellow",
                   command=partial(__mirror_flip_pose_callback,
                                   child_controls,
@@ -505,7 +509,8 @@ def mgear_dagmenu_fill(parent_menu, current_control):
                      attr.split("_")[-1].split("Ref")[0].split("ref")[0])
         _p_switch_menu = cmds.menuItem(parent=parent_menu, subMenu=True,
                                        tearOff=False, label="Parent {} {}"
-                                       .format(part, ctl))
+                                       .format(part, ctl),
+                                       image="dynamicConstraint.svg")
         cmds.radioMenuItemCollection(parent=_p_switch_menu)
         k_values = cmds.addAttr("{}.{}".format(current_control, attr),
                                 query=True, enumName=True).split(":")
@@ -533,7 +538,8 @@ def mgear_dagmenu_fill(parent_menu, current_control):
 
     # key all bellow function
     cmds.menuItem(parent=parent_menu, label="Keyframe child controls",
-                  command=partial(__keyframe_nodes_callback, child_controls))
+                  command=partial(__keyframe_nodes_callback, child_controls),
+                  image="setKeyframe.png")
 
 
 def mgear_dagmenu_toggle(state):
