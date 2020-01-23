@@ -158,11 +158,12 @@ def getControlers(model, gSuffix=CTRL_GRP_SUFFIX):
         return None
 
 
-def get_ik_fk_controls(control):
+def get_ik_fk_controls(control, blend_attr):
     """ Returns the ik and fk controls related to the given control blend attr
 
     Args:
         control (str): uihost control to interact with
+        blend_attr (str): attribute containing control list
 
     Returns:
         dict: fk and ik controls list on a dict
@@ -171,8 +172,16 @@ def get_ik_fk_controls(control):
     ik_fk_controls = {"fk_controls": [],
                       "ik_controls": []}
 
-    controls_attribute = control.replace("UI", "")
-    controls = cmds.getAttr("{}.{}".format(control, controls_attribute))
+    controls_attribute = blend_attr.replace("_blend", "_ctl")
+    try:
+        controls = cmds.getAttr("{}.{}".format(control, controls_attribute))
+    except ValueError:
+        if control == "world_ctl":
+            _msg = "New type attributes using world as host are not supported"
+            raise RuntimeError(_msg)
+        attr = "{}_{}_ctl".format(blend_attr.split("_")[0],
+                                  control.split("_")[1])
+        controls = cmds.getAttr("{}.{}".format(control, attr))
 
     # filters the controls
     for ctl in controls.split(","):

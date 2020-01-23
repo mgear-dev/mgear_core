@@ -14,7 +14,6 @@ import pymel.core as pm
 
 # mGear imports
 import mgear
-from mgear.core.anim_utils import select_all_child_controls
 from mgear.core.anim_utils import reset_all_keyable_attributes
 from mgear.core.pickWalk import get_all_tag_children
 from mgear.core.transform import resetTransform
@@ -83,7 +82,7 @@ def __range_switch_callback(*args):
     root = cmds.ls(args[0], long=True)[0].split("|")[1]
 
     # first find controls from the ui host control
-    ik_fk_controls = get_ik_fk_controls(switch_control)
+    ik_fk_controls = get_ik_fk_controls(switch_control, blend_attr)
 
     # organise ik controls
     ik_controls = {"ik_control": None,
@@ -174,7 +173,7 @@ def __switch_fkik_callback(*args):
     root = cmds.ls(args[0], long=True)[0].split("|")[1]
 
     # first find controls from the ui host control
-    ik_fk_controls = get_ik_fk_controls(switch_control)
+    ik_fk_controls = get_ik_fk_controls(switch_control, blend_attr)
 
     # organise ik controls
     ik_controls = {"ik_control": None,
@@ -502,7 +501,8 @@ def mgear_dagmenu_fill(parent_menu, current_control):
                 and not attr.endswith("Ref")):
             continue
 
-        part, ctl = attr.split("Ref")[0].split("ref")[0].split("_")
+        part, ctl = (attr.split("_")[0],
+                     attr.split("_")[-1].split("Ref")[0].split("ref")[0])
         _p_switch_menu = cmds.menuItem(parent=parent_menu, subMenu=True,
                                        tearOff=False, label="Parent {} {}"
                                        .format(part, ctl))
