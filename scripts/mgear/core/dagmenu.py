@@ -473,7 +473,10 @@ def mgear_dagmenu_fill(parent_menu, current_control):
     cmds.menuItem(parent=parent_menu, divider=True)
 
     # rotate order
-    if [x for x in k_attrs if "rotateOrder" in x]:
+    if (cmds.getAttr("{}.rotateOrder".format(current_control), channelBox=True)
+        or cmds.getAttr("{}.rotateOrder".format(current_control), keyable=True)
+        and not cmds.getAttr("{}.rotateOrder".format(current_control),
+                             lock=True)):
         _current_r_order = cmds.getAttr("{}.rotateOrder"
                                         .format(current_control))
         _rot_men = cmds.menuItem(parent=parent_menu,
