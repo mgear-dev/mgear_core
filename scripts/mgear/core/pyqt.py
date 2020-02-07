@@ -156,6 +156,7 @@ def showDialog(dialog, dInst=True, dockable=False, *args):
         control = windw.toolName + "WorkspaceControl"
         if pm.workspaceControl(control, q=True, exists=True):
             pm.workspaceControl(control, e=True, close=True)
+        if pm.workspaceControl(control, q=True, exists=True):
             pm.deleteUI(control, control=True)
     desktop = QtWidgets.QApplication.desktop()
     screen = desktop.screen()
