@@ -180,7 +180,7 @@ def get_ik_fk_controls(control, blend_attr):
             _msg = "New type attributes using world as host are not supported"
             raise RuntimeError(_msg)
         attr = "{}_{}_ctl".format(blend_attr.split("_")[0],
-                                  control.split("_")[1])
+                                  control.split(":")[-1].split("_")[1])
         controls = cmds.getAttr("{}.{}".format(control, attr))
 
     # filters the controls
@@ -550,7 +550,8 @@ def changeSpace(model, object_name, combo_attr, cnsIndex, ctl_name):
         ctl_name (str): Control name
     """
     nameSpace = getNamespace(model)
-    return changeSpace(nameSpace, object_name, combo_attr, cnsIndex, ctl_name)
+    return changeSpace_with_namespace(nameSpace, object_name, combo_attr,
+                                      cnsIndex, ctl_name)
 
 
 def change_rotate_order(control, target_order):

@@ -169,13 +169,11 @@ def __switch_fkik_callback(*args):
         list: callback from menuItem
     """
 
-    # switch_control = args[0].split("|")[-1].split(":")[-1]
     switch_control = args[0].split("|")[-1]
     keyframe = args[1]
     blend_attr = args[2]
 
-    # gets root node for the given control
-    # root = cmds.ls(args[0], long=True)[0].split("|")[1]
+    # gets namespace
     namespace = getNamespace(switch_control)
 
     # first find controls from the ui host control
@@ -235,8 +233,8 @@ def __switch_parent_callback(*args):
     search_token = switch_attr.split("_")[-1].split("ref")[0].split("Ref")[0]
     target_control = None
     controls_attr = "{}_{}_{}".format(switch_attr.split("_")[0],
-                                      switch_control.split("_")[1],
-                                      switch_control.split("_")[2])
+                                      switch_control.split(":")[-1].split("_")[1],
+                                      switch_control.split(":")[-1].split("_")[2])
     _controls = cmds.getAttr("{}.{}".format(switch_control, controls_attr))
 
     # search for target control
