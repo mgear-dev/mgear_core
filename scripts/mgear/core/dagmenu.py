@@ -25,6 +25,7 @@ from mgear.core.anim_utils import get_ik_fk_controls
 from mgear.core.anim_utils import IkFkTransfer
 from mgear.core.anim_utils import changeSpace
 from mgear.core.anim_utils import getNamespace
+from mgear.core.anim_utils import stripNamespace
 
 
 def __change_rotate_order_callback(*args):
@@ -77,7 +78,8 @@ def __range_switch_callback(*args):
     # instance for the range switch util
     range_switch = IkFkTransfer()
 
-    switch_control = args[0].split("|")[-1].split(":")[-1]
+    # switch_control = args[0].split("|")[-1].split(":")[-1]
+    switch_control = args[0].split("|")[-1]
     blend_attr = args[1]
 
     # gets root node for the given control
@@ -113,7 +115,7 @@ def __range_switch_callback(*args):
     # calls the ui
     range_switch.showUI(model=root,
                         ikfk_attr=blend_attr,
-                        uihost=switch_control,
+                        uihost=stripNamespace(switch_control),
                         fks=fk_controls,
                         ik=ik_controls["ik_control"],
                         upv=ik_controls["pole_vector"],

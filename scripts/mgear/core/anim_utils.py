@@ -169,8 +169,6 @@ def get_ik_fk_controls(control, blend_attr):
         dict: fk and ik controls list on a dict
     """
 
-    print control
-
     ik_fk_controls = {"fk_controls": [],
                       "ik_controls": []}
 
