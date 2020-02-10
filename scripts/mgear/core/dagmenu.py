@@ -20,10 +20,11 @@ from mgear.core.transform import resetTransform
 from mgear.core.anim_utils import mirrorPose
 from mgear.core.anim_utils import get_host_from_node
 from mgear.core.anim_utils import change_rotate_order
-from mgear.core.anim_utils import ikFkMatch
+from mgear.core.anim_utils import ikFkMatch_with_namespace
 from mgear.core.anim_utils import get_ik_fk_controls
 from mgear.core.anim_utils import IkFkTransfer
 from mgear.core.anim_utils import changeSpace
+from mgear.core.anim_utils import getNamespace
 
 
 def __change_rotate_order_callback(*args):
@@ -166,12 +167,14 @@ def __switch_fkik_callback(*args):
         list: callback from menuItem
     """
 
-    switch_control = args[0].split("|")[-1].split(":")[-1]
+    # switch_control = args[0].split("|")[-1].split(":")[-1]
+    switch_control = args[0].split("|")[-1]
     keyframe = args[1]
     blend_attr = args[2]
 
     # gets root node for the given control
-    root = cmds.ls(args[0], long=True)[0].split("|")[1]
+    # root = cmds.ls(args[0], long=True)[0].split("|")[1]
+    namespace = getNamespace(switch_control)
 
     # first find controls from the ui host control
     ik_fk_controls = get_ik_fk_controls(switch_control, blend_attr)
@@ -201,14 +204,14 @@ def __switch_fkik_callback(*args):
     fk_controls = sorted(fk_controls)
 
     # runs switch
-    ikFkMatch(model=root,
-              ikfk_attr=blend_attr,
-              ui_host=switch_control,
-              fks=fk_controls,
-              ik=ik_controls["ik_control"],
-              upv=ik_controls["pole_vector"],
-              ik_rot=ik_controls["ik_rot"],
-              key=keyframe)
+    ikFkMatch_with_namespace(namespace=namespace,
+                             ikfk_attr=blend_attr,
+                             ui_host=switch_control,
+                             fks=fk_controls,
+                             ik=ik_controls["ik_control"],
+                             upv=ik_controls["pole_vector"],
+                             ik_rot=ik_controls["ik_rot"],
+                             key=keyframe)
 
 
 def __switch_parent_callback(*args):
@@ -223,7 +226,8 @@ def __switch_parent_callback(*args):
                    "rot": "orbit",
                    "knee": "mid"}
 
-    switch_control = args[0].split("|")[-1].split(":")[-1]
+    # switch_control = args[0].split("|")[-1].split(":")[-1]
+    switch_control = args[0].split("|")[-1]
     switch_attr = args[1]
     switch_idx = args[2]
     search_token = switch_attr.split("_")[-1].split("ref")[0].split("Ref")[0]

@@ -169,6 +169,8 @@ def get_ik_fk_controls(control, blend_attr):
         dict: fk and ik controls list on a dict
     """
 
+    print control
+
     ik_fk_controls = {"fk_controls": [],
                       "ik_controls": []}
 
@@ -506,8 +508,8 @@ def changeSpace(model, object_name, combo_attr, cnsIndex, ctl_name):
     """
     nameSpace = getNamespace(model)
     if nameSpace:
-        node = getNode(nameSpace + ":" + object_name)
-        ctl = getNode(nameSpace + ":" + ctl_name)
+        node = getNode(nameSpace + ":" + stripNamespace(object_name))
+        ctl = getNode(nameSpace + ":" + stripNamespace(ctl_name))
     else:
         node = getNode(object_name)
         ctl = getNode(ctl_name)
@@ -646,14 +648,21 @@ def getComboKeys(model, object_name, combo_attr):
 # ================================================
 
 
-def ikFkMatch(model, ikfk_attr, ui_host, fks, ik, upv, ik_rot=None, key=None):
+def ikFkMatch_with_namespace(namespace,
+                             ikfk_attr,
+                             ui_host,
+                             fks,
+                             ik,
+                             upv,
+                             ik_rot=None,
+                             key=None):
     """Switch IK/FK with matching functionality
 
     This function is meant to work with 2 joint limbs.
     i.e: human legs or arms
 
     Args:
-        model (PyNode): Rig top transform node
+        namespace (str): Rig name space
         ikfk_attr (str): Blend ik fk attribute name
         ui_host (str): Ui host name
         fks ([str]): List of fk controls names
@@ -663,13 +672,14 @@ def ikFkMatch(model, ikfk_attr, ui_host, fks, ik, upv, ik_rot=None, key=None):
         key (None, bool): optional. Whether we do an snap with animation
     """
 
-    # gets namespace
-    current_namespace = getNamespace(model)
-
     # returns a pymel node on the given name
     def _get_node(name):
         # type: (str) -> pm.nodetypes.Transform
-        node = getNode(":".join([current_namespace, name]))
+        name = stripNamespace(name)
+        if namespace:
+            node = getNode(":".join([namespace, name]))
+        else:
+            node = getNode(name)
 
         if not node:
             mgear.log("Can't find object : {0}".format(name), mgear.sev_error)
@@ -749,6 +759,36 @@ def ikFkMatch(model, ikfk_attr, ui_host, fks, ik, upv, ik_rot=None, key=None):
         [cmds.setKeyframe("{}".format(elem),
                           time=(cmds.currentTime(query=True)))
          for elem in _all_controls]
+
+
+def ikFkMatch(model, ikfk_attr, ui_host, fks, ik, upv, ik_rot=None, key=None):
+    """Switch IK/FK with matching functionality
+
+    This function is meant to work with 2 joint limbs.
+    i.e: human legs or arms
+
+    Args:
+        model (PyNode): Rig top transform node
+        ikfk_attr (str): Blend ik fk attribute name
+        ui_host (str): Ui host name
+        fks ([str]): List of fk controls names
+        ik (str): Ik control name
+        upv (str): Up vector control name
+        ikRot (None, str): optional. Name of the Ik Rotation control
+        key (None, bool): optional. Whether we do an snap with animation
+    """
+
+    # gets namespace
+    current_namespace = getNamespace(model)
+
+    ikFkMatch_with_namespace(current_namespace,
+                             ikfk_attr,
+                             ui_host,
+                             fks,
+                             ik,
+                             upv,
+                             ik_rot=ik_rot,
+                             key=key)
 
 
 # ==============================================================================
