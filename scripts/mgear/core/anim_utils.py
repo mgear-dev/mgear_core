@@ -471,6 +471,26 @@ def toggleAttr(model, object_name, attr_name):
 # ================================================
 
 
+def getComboIndex_with_namespace(namespace, object_name, combo_attr):
+    """Get the index from a  combo attribute
+
+    Args:
+        namespace (str): namespace
+        object_name (str): Control name
+        combo_attr (str): Combo attribute name
+
+    Returns:
+        int: Current index in the combo attribute
+    """
+    if namespace:
+        node = getNode(namespace + ":" + stripNamespace(object_name))
+    else:
+        node = getNode(object_name)
+
+    oVal = node.attr(combo_attr).get()
+    return oVal
+
+
 def getComboIndex(model, object_name, combo_attr):
     """Get the index from a  combo attribute
 
@@ -483,13 +503,38 @@ def getComboIndex(model, object_name, combo_attr):
         int: Current index in the combo attribute
     """
     nameSpace = getNamespace(model)
-    if nameSpace:
-        node = getNode(nameSpace + ":" + object_name)
+    return getComboIndex_with_namespace(nameSpace, object_name, combo_attr)
+
+
+def changeSpace_with_namespace(namespace,
+                               object_name,
+                               combo_attr,
+                               cnsIndex,
+                               ctl_name):
+    """Change the space of a control
+
+    i.e: A control with ik reference array
+
+    Args:
+        namespace (str): namespace
+        object_name (str): Object Name
+        combo_attr (str): Combo attribute name
+        cnsIndex (int): Combo index to change
+        ctl_name (str): Control name
+    """
+    if namespace:
+        node = getNode(namespace + ":" + stripNamespace(object_name))
+        ctl = getNode(namespace + ":" + stripNamespace(ctl_name))
     else:
         node = getNode(object_name)
+        ctl = getNode(ctl_name)
 
-    oVal = node.attr(combo_attr).get()
-    return oVal
+    sWM = ctl.getMatrix(worldSpace=True)
+
+    oAttr = node.attr(combo_attr)
+
+    oAttr.set(cnsIndex)
+    ctl.setMatrix(sWM, worldSpace=True)
 
 
 def changeSpace(model, object_name, combo_attr, cnsIndex, ctl_name):
@@ -505,19 +550,7 @@ def changeSpace(model, object_name, combo_attr, cnsIndex, ctl_name):
         ctl_name (str): Control name
     """
     nameSpace = getNamespace(model)
-    if nameSpace:
-        node = getNode(nameSpace + ":" + stripNamespace(object_name))
-        ctl = getNode(nameSpace + ":" + stripNamespace(ctl_name))
-    else:
-        node = getNode(object_name)
-        ctl = getNode(ctl_name)
-
-    sWM = ctl.getMatrix(worldSpace=True)
-
-    oAttr = node.attr(combo_attr)
-
-    oAttr.set(cnsIndex)
-    ctl.setMatrix(sWM, worldSpace=True)
+    return changeSpace(nameSpace, object_name, combo_attr, cnsIndex, ctl_name)
 
 
 def change_rotate_order(control, target_order):
@@ -618,6 +651,28 @@ def change_rotate_order(control, target_order):
 # ================================================
 
 
+def getComboKeys_with_namespace(namespace, object_name, combo_attr):
+    """Get the keys from a combo attribute
+
+    Args:
+        namespace (str): namespace
+        object_name (str): Control name
+        combo_attr (str): Combo attribute name
+
+    Returns:
+        list: Keys names from the combo attribute.
+    """
+    if namespace:
+        node = getNode(namespace + ":" + stripNamespace(object_name))
+    else:
+        node = getNode(object_name)
+
+    oAttr = node.attr(combo_attr)
+    keys = oAttr.getEnums().keys()
+    keys.append("++ Space Transfer ++")
+    return keys
+
+
 def getComboKeys(model, object_name, combo_attr):
     """Get the keys from a combo attribute
 
@@ -630,15 +685,8 @@ def getComboKeys(model, object_name, combo_attr):
         list: Keys names from the combo attribute.
     """
     nameSpace = getNamespace(model)
-    if nameSpace:
-        node = getNode(nameSpace + ":" + object_name)
-    else:
-        node = getNode(object_name)
 
-    oAttr = node.attr(combo_attr)
-    keys = oAttr.getEnums().keys()
-    keys.append("++ Space Transfer ++")
-    return keys
+    return getComboKeys_with_namespace(nameSpace, object_name, combo_attr)
 
 ##################################################
 # IK FK switch match
