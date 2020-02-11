@@ -139,6 +139,32 @@ def recordNodesMatrices(nodes, desiredTime):
     return nodeToMat_dict
 
 
+def getRootNode():
+    """Returns the root node from a selected node
+
+    Returns:
+        PyNode: The root top node
+    """
+
+    root = None
+
+    current = pm.ls(sl=True)
+    if not current:
+        raise RuntimeError("You need to select at least one rig node")
+
+    if not pm.listRelatives(current, parent=True):
+        root = current[0]
+    else:
+        while pm.listRelatives(current, parent=True):
+            current = pm.listRelatives(current, parent=True)
+            root = current[0]
+
+    if not root:
+        raise RuntimeError("Couldn't find root node from your selection")
+
+    return root
+
+
 def getControlers(model, gSuffix=CTRL_GRP_SUFFIX):
     """Get thr controlers from the set
 
@@ -1778,12 +1804,17 @@ class IkFkTransfer(AbstractAnimationTransfer):
 # Baker Springs
 
 @utils.one_undo
-def clearSprings(model):
+def clearSprings(model=None):
     """Delete baked animation from spring
 
     Args:
         model (dagNode): The rig top node
     """
+
+    # filters the root node from selection
+    if not model:
+        model = getRootNode()
+
     springNodes = getControlers(model, gSuffix=PLOT_GRP_SUFFIX)
     pairblends = [sn.listConnections(type="pairBlend")[0]
                   for sn in springNodes]
@@ -1807,12 +1838,17 @@ def clearSprings(model):
 
 @utils.one_undo
 @utils.viewport_off
-def bakeSprings(model):
+def bakeSprings(model=None):
     """Bake the automatic spring animation to animation curves
 
     Args:
         model (dagNode): The rig top node
     """
+
+    # filters the root node from selection
+    if not model:
+        model = getRootNode()
+
     # first clear animation
     clearSprings(model)
 
