@@ -261,12 +261,16 @@ def exportSkinPack(packPath=None, objs=None, use_json=False, *args):
                                   fileMode=0,
                                   startingDirectory=startDir,
                                   fileFilter='mGear skinPack (*%s)' % PACK_EXT)
-    if not packPath:
-        return
-    packPath = packPath[0]
-    if not packPath.endswith(PACK_EXT):
-        packPath += PACK_EXT
+        if not packPath:
+            return
+        packPath = packPath[0]
+        if not packPath.endswith(PACK_EXT):
+            packPath += PACK_EXT
 
+    if not packPath.endswith(PACK_EXT):
+        pm.displayWarning("Not valid file extension for: {}".format(packPath))
+        return
+            
     packDic["rootPath"], packName = os.path.split(packPath)
 
     for obj in objs:
