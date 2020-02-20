@@ -235,7 +235,7 @@ def __switch_parent_callback(*args):
     controls_attr = "{}_{}_{}".format(switch_attr.split("_")[0],
                                       switch_control.split(":")[-1].split("_")[1],
                                       switch_control.split(":")[-1].split("_")[2])
-    _controls = cmds.getAttr("{}.{}".format(switch_control, controls_attr))
+    _controls = cmds.getAttr("{}.{}".format(args[0], controls_attr))
 
     # search for target control
     for ctl in _controls.split(","):
@@ -250,9 +250,31 @@ def __switch_parent_callback(*args):
             break
 
     # gets root node for the given control
-    root = cmds.ls(args[0], long=True)[0].split("|")[1]
+    namespace_value = args[0].split("|")[-1].split(":")
+    if len(namespace_value) > 1:
+        namespace_value = namespace_value[0]
+    else:
+        namespace_value = ""
 
-    if not target_control:
+    root = None
+
+    current_parent = cmds.listRelatives(args[0], fullPath=True, parent=True)
+    if current_parent:
+        current_parent = current_parent[0]
+
+    while not root:
+
+        if cmds.objExists("{}.is_rig".format(current_parent)):
+            root = cmds.ls("{}.is_rig".format(current_parent))[0]
+        else:
+            try:
+                current_parent = cmds.listRelatives(current_parent,
+                                                    fullPath=True,
+                                                    parent=True)[0]
+            except TypeError:
+                break
+
+    if not root or not target_control:
         return
 
     autokey = cmds.listConnections("{}.{}".format(switch_control, switch_attr),
