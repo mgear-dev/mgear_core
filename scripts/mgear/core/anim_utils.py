@@ -39,6 +39,9 @@ START_IK_TOKEN = "_ik0_ctl"
 END_IK_TOKEN = "_ik1_ctl"
 POS_IK_TOKEN = "_spinePosition_ctl"
 
+# No mirror attributes ------------------------------------------------
+NO_MIRROR_ATTRIBUTES = ["isRig", "uiHost", "_ctl"]
+
 ##################################################
 # util
 
@@ -987,24 +990,25 @@ def applyMirror(nameSpace, mirrorEntry):
 
     Args:
         nameSpace (str): Namespace
-        mirrorEntry (list): List witht the mirror entry template
+        mirrorEntry (list): List with the mirror entry template
     """
+
     node = mirrorEntry["target"]
     attr = mirrorEntry["attr"]
     val = mirrorEntry["val"]
 
+    for skip in NO_MIRROR_ATTRIBUTES:
+        if attr.count(skip):
+            return
+
     try:
-        if (
-            pm.attributeQuery(attr, node=node, shortName=True, exists=True) and
-            not node.attr(attr).isLocked()
-        ):
+        if (pm.attributeQuery(attr, node=node, shortName=True, exists=True) and
+                not node.attr(attr).isLocked()):
             node.attr(attr).set(val)
 
     except RuntimeError as e:
-        mgear.log("applyMirror failed: {0} {1}: {2}".format(node.name(),
-                                                            attr,
-                                                            e),
-                  mgear.sev_error)
+        mgear.log("applyMirror failed: {0} {1}: {2}"
+                  .format(node.name(), attr, e), mgear.sev_error)
 
 
 def gatherMirrorData(nameSpace, node, flip):
