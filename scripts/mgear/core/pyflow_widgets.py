@@ -39,6 +39,8 @@ INT_RANGE_MAX = maxint + 0
 
 MainColor = QtGui.QColor(60, 60, 60)
 
+ATTR_SLIDER_TYPES = ["int", "float", "double", "doubleLinear", "doubleAngle"]
+
 
 class Colors:
     AbsoluteBlack = QtGui.QColor(0, 0, 0, 255)
@@ -712,7 +714,7 @@ class pyf_Slider(QtWidgets.QWidget):
 
     def __init__(self,
                  parent,
-                 type="float",
+                 Type="float",
                  style=0,
                  name=None,
                  sliderRange=(-100.0, 100.0),
@@ -737,12 +739,13 @@ class pyf_Slider(QtWidgets.QWidget):
         super(pyf_Slider, self).__init__(parent=parent, *args)
         self.parent = parent
         self.setLayout(QtWidgets.QHBoxLayout())
-        self.input = valueBox(type=type)
+        self.input = valueBox(type=Type)
         self.input.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
         self.input.valueIncremented.connect(self.incrementValue)
-        self.type = type
+        self.input.setValue(defaultValue)
+        self.type = Type
 
-        if self.type == "float":
+        if self.type in ATTR_SLIDER_TYPES:
             self.sld = DoubleSlider(self,
                                     defaultValue=defaultValue,
                                     sliderRange=sliderRange,
@@ -753,7 +756,7 @@ class pyf_Slider(QtWidgets.QWidget):
 
         self.input.setRange(sliderRange[0], sliderRange[1])
 
-        self.layout().setContentsMargins(10, 0, 0, 0)
+        self.layout().setContentsMargins(0, 0, 0, 0)
         self.input.setContentsMargins(0, 0, 0, 0)
         self.sld.setContentsMargins(0, 0, 0, 0)
         self.label = None
