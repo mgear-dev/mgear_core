@@ -11,6 +11,7 @@ import pymel.core as pm
 from mgear.vendor.Qt import QtWidgets
 from mgear.vendor.Qt import QtCompat
 from mgear.vendor.Qt import QtGui
+from mgear.vendor.Qt import QtSvg
 
 UI_EXT = "ui"
 
@@ -250,3 +251,30 @@ def get_instance(parent, gui_class):
         if isinstance(children, gui_class):
             return children
     return None
+
+
+def get_icon_path(icon_name=None):
+    """ Gets the directory path to the icon
+    """
+
+    file_dir = os.path.dirname(__file__)
+
+    if "\\" in file_dir:
+        file_dir = file_dir.replace("\\", "/")
+    if icon_name:
+        return "{0}/icons/{1}".format(file_dir, icon_name)
+    else:
+        return "{}/icons".format(file_dir)
+
+def get_icon(icon, size=24):
+    """get svg icon from icon resources folder as a pixel map
+    """
+    img = get_icon_path("{}.svg".format(icon))
+    svg_renderer = QtSvg.QSvgRenderer(img)
+    image = QtGui.QImage(size, size, QtGui.QImage.Format_ARGB32)
+    # Set the ARGB to 0 to prevent rendering artifacts
+    image.fill(0x00000000)
+    svg_renderer.render(QtGui.QPainter(image))
+    pixmap = QtGui.QPixmap.fromImage(image)
+
+    return pixmap
