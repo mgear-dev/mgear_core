@@ -371,7 +371,6 @@ class draggers(QtWidgets.QWidget):
                     if modifiers == modif and deltaX % 32 == 0:
                         self.increment.emit(v)
 
-                    print v
 
                 self.lastDeltaX = deltaX
 
@@ -787,19 +786,12 @@ class pyf_Slider(QtWidgets.QWidget):
         self._value = 0.0
 
     def sliderValueChanged(self, x):
-        print x
-        print self.sld.value()
 
-        print self.sld.minimum()
-        print self.sld.maximum()
-        print self.input.minimum()
-        print self.input.maximum()
         outValue = mapRangeUnclamped(x,
                                      float(self.sld.minimum()),
                                      float(self.sld.maximum()),
                                      self.input.minimum(),
                                      self.input.maximum())
-        print outValue
         self.input.blockSignals(True)
         self.input.setValue(outValue)
         self.input.blockSignals(False)
@@ -807,18 +799,12 @@ class pyf_Slider(QtWidgets.QWidget):
 
     def valBoxValueChanged(self, x):
         val = self.input.value()
-        print x
-        print val
-        print self.sld.minimum()
-        print self.sld.maximum()
-        print self.input.minimum()
-        print self.input.maximum()
+
         sv = mapRangeUnclamped(val,
                                self.input.minimum(),
                                self.input.maximum(),
                                self.sld.minimum(),
                                self.sld.maximum())
-        print sv
         self.sld.blockSignals(True)
         self.sld.setValue(int(sv))
         self.sld.blockSignals(False)
