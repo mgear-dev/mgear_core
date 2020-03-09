@@ -710,6 +710,8 @@ class pyf_Slider(QtWidgets.QWidget):
         int/float
     """
     valueChanged = QtCore.Signal(object)
+    sliderPressed = QtCore.Signal()
+    sliderReleased = QtCore.Signal()
 
     def __init__(self,
                  parent,
@@ -781,9 +783,18 @@ class pyf_Slider(QtWidgets.QWidget):
             self.sld.setStyleSheet(getSliderStyleSheet("sliderStyleSheetB"))
 
         self.sld.valueChanged.connect(self.sliderValueChanged)
+        self.sld.sliderPressed.connect(self.signalSliderPressed)
+        self.sld.sliderReleased.connect(self.signalSliderReleased)
         self.input.valueChanged.connect(self.valBoxValueChanged)
 
         self._value = 0.0
+
+    def signalSliderPressed(self):
+        self.sliderPressed.emit()
+
+    def signalSliderReleased(self):
+        self.sliderReleased.emit()
+
 
     def sliderValueChanged(self, x):
 
