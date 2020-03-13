@@ -20,7 +20,6 @@
 # limitations under the License.
 
 
-
 from copy import copy
 import struct
 
@@ -371,7 +370,6 @@ class draggers(QtWidgets.QWidget):
                     if modifiers == modif and deltaX % 32 == 0:
                         self.increment.emit(v)
 
-
                 self.lastDeltaX = deltaX
 
         if event.type() == QtCore.QEvent.MouseButtonRelease:
@@ -419,6 +417,7 @@ class slider(QtWidgets.QSlider):
         # if SessionDescriptor().software == "maya":
         self.LeftButton = QtCore.Qt.MidButton
         self.MidButton = QtCore.Qt.LeftButton
+        self.defaultValue = 0
 
         self.setRange(self.sliderRange[0], self.sliderRange[1])
 
@@ -543,6 +542,8 @@ class DoubleSlider(slider):
         self._dencity = abs(dencity)
         self.setOrientation(QtCore.Qt.Horizontal)
 
+        self.defaultValue = defaultValue
+
         # set internal int slider range (dencity)
         self.setMinimum(0)
         self.setMaximum(self._dencity)
@@ -550,7 +551,13 @@ class DoubleSlider(slider):
         # set out range
         self.valueChanged.connect(self.onInternalValueChanged)
         self.valueIncremented.connect(self.onValueIncremented)
-        self.setMappedValue(defaultValue, True)
+        self.setMappedValue(self.defaultValue, True)
+
+    def setRange(self, min_val, max_val):
+        # implement a dummny setRange to avoid integer interpolation in
+        # the slider
+        # NOTE: not 100% sure why this should be override
+        pass
 
     def onValueIncremented(self, step):
         # convert step value to slider internal space
@@ -795,7 +802,6 @@ class pyf_Slider(QtWidgets.QWidget):
     def signalSliderReleased(self):
         self.sliderReleased.emit()
 
-
     def sliderValueChanged(self, x):
 
         outValue = mapRangeUnclamped(x,
@@ -862,14 +868,17 @@ class pyf_Slider(QtWidgets.QWidget):
         self.valBoxValueChanged(0)
 
     def setMinimum(self, value):
-        # self.input.setMinimum(value)
-        # self.sld.setMinimum(value)
+        self.input.setMinimum(value)
+        self.sld.setMinimum(value)
         pass
 
     def setMaximum(self, value):
-        # self.input.setMaximum(value)
-        # self.sld.setMaximum(value)
-        pass
+        self.input.setMaximum(value)
+        self.sld.setMaximum(value)
+        # pass
+
+    def getRange(self):
+        return [self.input.minimum(), self.input.maximum()]
 
     def setRange(self, min, max):
         """Sets the range for the input value, real max and min range
@@ -879,8 +888,10 @@ class pyf_Slider(QtWidgets.QWidget):
         :param max: Maximum Value
         :type max: float/int
         """
-        self.setMinimum(min)
-        self.setMaximum(max)
+        # self.setMinimum(min)
+        # self.setMaximum(max)
+        self.input.setRange(min, max)
+        self.sld.setRange(min, max)
 
     def setDisplayMinimun(self, value):
         """Sets the Minimum value for display options, real min value don't
@@ -935,6 +946,3 @@ class pyf_Slider(QtWidgets.QWidget):
         """Show Slider
         """
         self.sld.show()
-
-
-
