@@ -155,12 +155,15 @@ def getRootNode():
     if not current:
         raise RuntimeError("You need to select at least one rig node")
 
-    if not pm.listRelatives(current, parent=True):
+    if pm.objExists("{}.is_rig".format(current[0])):
         root = current[0]
     else:
-        while pm.listRelatives(current, parent=True):
-            current = pm.listRelatives(current, parent=True)
-            root = current[0]
+        holder = current[0]
+        while pm.listRelatives(holder, parent=True) and not root:
+            if pm.objExists("{}.is_rig".format(holder)):
+                root = holder
+            else:
+                holder = pm.listRelatives(holder, parent=True)[0]
 
     if not root:
         raise RuntimeError("Couldn't find root node from your selection")
@@ -1852,6 +1855,8 @@ def bakeSprings(model=None):
     # filters the root node from selection
     if not model:
         model = getRootNode()
+
+    print("Using root: {}".format(model))
 
     # first clear animation
     clearSprings(model)
