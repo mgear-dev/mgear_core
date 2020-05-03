@@ -281,7 +281,7 @@ def __switch_parent_callback(*args):
                                    type="animCurve")
 
     if autokey:
-        cmds.setKeyframe(target_control, "{}.{}"
+        cmds.setKeyframe("{}:{}".format(namespace_value, target_control), "{}.{}"
                          .format(switch_control, switch_attr),
                          time=(cmds.currentTime(query=True) - 1.0))
 
@@ -289,7 +289,7 @@ def __switch_parent_callback(*args):
     changeSpace(root, switch_control, switch_attr, switch_idx, target_control)
 
     if autokey:
-        cmds.setKeyframe(target_control, "{}.{}"
+        cmds.setKeyframe("{}:{}".format(namespace_value, target_control), "{}.{}"
                          .format(switch_control, switch_attr),
                          time=(cmds.currentTime(query=True)))
 
