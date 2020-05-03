@@ -31,6 +31,8 @@ def get_all_tag_children(node):
     while child is not None:
         children.extend(child)
         tag = cmds.ls(cmds.listConnections(child[0], type="controller"))
+        if cmds.listConnections("{}.parent".format(tag[0])) == node:
+            return children
         child = cmds.controller(tag, query=True, children=True)
 
     return children
