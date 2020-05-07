@@ -550,6 +550,7 @@ def skinCopy(sourceMesh=None, targetMesh=None, *args):
         ss = getSkinCluster(sourceMesh)
 
         if ss:
+            skinMethod = ss.skinningMethod.get()
             oDef = pm.skinCluster(sourceMesh, query=True, influence=True)
             skinCluster = pm.skinCluster(oDef,
                                          targetMesh,
@@ -562,6 +563,7 @@ def skinCopy(sourceMesh=None, targetMesh=None, *args):
                                ia="oneToOne",
                                sm=True,
                                nr=True)
+            skinCluster.skinningMethod.set(skinMethod)
         else:
             errorMsg = "Source Mesh : {} doesn't have a skinCluster."
             pm.displayError(errorMsg.format(sourceMesh.name()))
