@@ -950,6 +950,84 @@ def smart_reset(*args):
 ##########################################################
 
 
+def get_channelBox():
+    """Get the channel box
+
+    Returns:
+        str: channel box path
+    """
+    mel_str = 'global string $gChannelBoxName; $temp=$gChannelBoxName;'
+    channelBox = pm.mel.eval(mel_str)
+    return channelBox
+
+
+def collect_attrs(node, attrs, attrs_list, shapes=False):
+    """Collect the channel full path in a list.
+
+    Checks that the channel is not repeated.
+
+    Args:
+        node (PyNode): Node that owns the channels
+        attrs (str): the list to add the channels full path
+        attrs_list (list): the list of channels names
+        shapes (bool, optional): If True will search the attr only in shapes
+    """
+    if attrs_list:
+        for at in attrs_list:
+            if shapes:
+                try:
+                    shapes_nodes = node.getShapes()
+                except AttributeError:
+                    pm.displayWarning("Something whent wrong. Looks like {} "
+                                      "don,t have shapes. Please clear "
+                                      "selection and try "
+                                      "again".format(node.name()))
+                    return
+                for sh in shapes_nodes:
+                    if sh.hasAttr(at):
+                        full_attr_path = "{0}.{1}".format(sh, at)
+
+                        # if multiple shapes have same att will add all
+                        if full_attr_path not in attrs:
+                            attrs.append(full_attr_path)
+
+            elif node.hasAttr(at):
+                full_attr_path = "{0}.{1}".format(node, at)
+
+                if full_attr_path not in attrs:
+                    attrs.append(full_attr_path)
+
+
+def get_selected_channels_full_path():
+    """Get the selected channels full path from channel box
+    This function will collect channels from any area of the channel box. This
+    include, Main, shape, input and output
+
+    Returns:
+        list: list of channels full path
+    """
+    attrs = []
+    node = pm.ls(sl=True)
+    if node:
+        node = node[0]
+
+        collect_attrs(
+            node, attrs, pm.channelBox(get_channelBox(), q=True, sma=True))
+
+        # if the attr is from shape node, we need to search in all shapes
+        collect_attrs(node,
+                      attrs,
+                      pm.channelBox(get_channelBox(), q=True, ssa=True),
+                      shapes=True)
+
+        collect_attrs(
+            node, attrs, pm.channelBox(get_channelBox(), q=True, sha=True))
+        collect_attrs(
+            node, attrs, pm.channelBox(get_channelBox(), q=True, soa=True))
+
+    return attrs
+
+
 def getSelectedChannels(userDefine=False):
     """Get the selected channels on the channel box
 
@@ -962,9 +1040,7 @@ def getSelectedChannels(userDefine=False):
 
     """
     # fetch core's main channelbox
-    mel_str = 'global string $gChannelBoxName; $temp=$gChannelBoxName;'
-    channelBox = pm.mel.eval(mel_str)
-    attrs = pm.channelBox(channelBox, q=True, sma=True)
+    attrs = pm.channelBox(get_channelBox(), q=True, sma=True)
     if userDefine:
         oSel = pm.selected()[0]
         uda = oSel.listAttr(ud=True)
