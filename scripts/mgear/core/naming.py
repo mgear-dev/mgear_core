@@ -3,7 +3,8 @@ Original module from Cesar Saez
 https://github.com/csaez/naming
 
 """
-
+# Stdlib imports
+from __future__ import absolute_import
 import os
 import json
 import copy
