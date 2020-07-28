@@ -221,3 +221,40 @@ def findComponentChildren2(node, name, sideIndex):
             children.append(item)
 
     return [pm.PyNode(x) for x in children]
+
+
+def findComponentChildren3(node, name, sideIndex):
+    """Returns the component children of input component root.
+
+    This function is using Maya cmds instead of PyMel
+
+    Note:
+        This method is specific to work with shifter guides naming conventions
+
+    Arguments:
+        node (dagNode): The input node to search
+        name (str): The name to search
+        sideIndex (str): the side
+
+    Returns:
+        dagNode list: The children dagNodes
+
+    >>> objList =  dag.findComponentChildren(self.parent,
+                                             oldName,
+                                             oldSideIndex)
+
+    """
+    children = []
+    print "-=-=-=-=-=-=-=-="
+    print node
+    for item in cmds.listRelatives(node.name(), allDescendents=True,
+                                   fullPath=True, type="transform"):
+        checkName = item.split("|")[-1]
+        in_name = "_".join([name, sideIndex])
+
+        print checkName
+        print in_name
+        if in_name in checkName:
+            children.append(item)
+
+    return [pm.PyNode(x) for x in children]

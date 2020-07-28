@@ -254,6 +254,7 @@ def get_repo():
 
 def save_session(repo=None):
     repo = repo or get_repo()
+    print repo
     if not os.path.exists(repo):
         os.mkdir(repo)
     # tokens and rules

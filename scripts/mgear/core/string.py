@@ -25,6 +25,22 @@ def normalize(string):
     return re.sub("[^A-Za-z0-9_-]", "_", str(string))
 
 
+def normalize2(string):
+    """Replace all invalid characters with "_". including "-"
+    This ensure that the name is compatible with Maya naming rules
+
+    :param string string: A string to normalize.
+    :return string: Normalized string
+
+    """
+    string = str(string)
+
+    if re.match("^[0-9]", string):
+        string = "_" + string
+
+    return re.sub("[^A-Za-z0-9_]", "_", str(string))
+
+
 def removeInvalidCharacter(string):
     """Remove all invalid character.
 
