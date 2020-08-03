@@ -245,15 +245,11 @@ def findComponentChildren3(node, name, sideIndex):
 
     """
     children = []
-    print "-=-=-=-=-=-=-=-="
-    print node
     for item in cmds.listRelatives(node.name(), allDescendents=True,
                                    fullPath=True, type="transform"):
         checkName = item.split("|")[-1]
         in_name = "_".join([name, sideIndex])
 
-        print checkName
-        print in_name
         if in_name in checkName:
             children.append(item)
 
