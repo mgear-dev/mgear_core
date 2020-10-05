@@ -15,7 +15,7 @@ def get_all_tag_children(node):
     """Gets all child tag controls from the given tag node
 
     Args:
-        node (dagNode): Controller object with tag
+        node (str): Name of controller object with tag
 
     Returns:
         list: List of child controls (Maya transform nodes)
@@ -30,10 +30,13 @@ def get_all_tag_children(node):
     # loop on child controller nodes to get all children
     while child is not None:
         children.extend(child)
-        tag = cmds.ls(cmds.listConnections(child[0], type="controller"))
-        if cmds.listConnections("{}.parent".format(tag[0])) == node:
-            return children
-        child = cmds.controller(tag, query=True, children=True)
+        tags = []
+        for c in child:
+            tag = cmds.ls(cmds.listConnections(c, type="controller"))
+            tags.extend(tag)
+            if cmds.listConnections("{}.parent".format(tag[0])) == node:
+                return children
+        child = cmds.controller(tags, query=True, children=True)
 
     return children
 

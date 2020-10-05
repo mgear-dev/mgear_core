@@ -232,9 +232,10 @@ def __switch_parent_callback(*args):
     switch_idx = args[2]
     search_token = switch_attr.split("_")[-1].split("ref")[0].split("Ref")[0]
     target_control = None
-    controls_attr = "{}_{}_{}".format(switch_attr.split("_")[0],
-                                      switch_control.split(":")[-1].split("_")[1],
-                                      switch_control.split(":")[-1].split("_")[2])
+    controls_attr = "{}_{}_{}".format(
+        switch_attr.split("_")[0],
+        switch_control.split(":")[-1].split("_")[1],
+        switch_control.split(":")[-1].split("_")[2])
     _controls = cmds.getAttr("{}.{}".format(args[0], controls_attr))
 
     # search for target control
@@ -281,17 +282,19 @@ def __switch_parent_callback(*args):
                                    type="animCurve")
 
     if autokey:
-        cmds.setKeyframe("{}:{}".format(namespace_value, target_control), "{}.{}"
-                         .format(switch_control, switch_attr),
-                         time=(cmds.currentTime(query=True) - 1.0))
+        cmds.setKeyframe("{}:{}".format(
+            namespace_value, target_control), "{}.{}"
+            .format(switch_control, switch_attr),
+            time=(cmds.currentTime(query=True) - 1.0))
 
     # triggers switch
     changeSpace(root, switch_control, switch_attr, switch_idx, target_control)
 
     if autokey:
-        cmds.setKeyframe("{}:{}".format(namespace_value, target_control), "{}.{}"
-                         .format(switch_control, switch_attr),
-                         time=(cmds.currentTime(query=True)))
+        cmds.setKeyframe("{}:{}".format(
+            namespace_value, target_control), "{}.{}"
+            .format(switch_control, switch_attr),
+            time=(cmds.currentTime(query=True)))
 
 
 def get_option_var_state():
@@ -391,9 +394,12 @@ def mgear_dagmenu_fill(parent_menu, current_control):
     child_controls = []
     for ctl in _current_selection:
         [child_controls.append(x)
-         for x in get_all_tag_children(cmds.ls(cmds.listConnections(ctl),
-                                               type="controller"))
+         for x in get_all_tag_children(ctl)
          if x not in child_controls]
+        # [child_controls.append(x)
+        #  for x in get_all_tag_children(cmds.ls(cmds.listConnections(ctl),
+        #                                        type="controller"))
+        #  if x not in child_controls]
 
     child_controls.append(current_control)
 
@@ -618,8 +624,8 @@ def mgear_dagmenu_toggle(state):
                 # don't edit any space or syntax here as this is what Maya
                 # expects
                 mel.eval('menu -edit -postMenuCommand '
-                         '"buildObjectMenuItemsNow ' +
-                         parent_menu.replace('"', '') + '"' + maya_menu)
+                         '"buildObjectMenuItemsNow '
+                         + parent_menu.replace('"', '') + '"' + maya_menu)
 
 
 def run(*args, **kwargs):  # @UnusedVariable

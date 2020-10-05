@@ -357,12 +357,14 @@ def select_all_child_controls(control, *args):  # @unusedVariable
     """
 
     # gets controller node from the given control. Returns if none is found
-    tag = cmds.ls(cmds.listConnections(control), type="controller")
-    if not tag:
-        return
+    # tag = cmds.ls(cmds.listConnections(control), type="controller")
+    # if not tag:
+    #     return
 
     # query child controls
-    children = get_all_tag_children(tag)
+    children = get_all_tag_children(control)
+    if not children:
+        return
 
     # adds to current selection the children elements
     cmds.select(children, add=True)
@@ -814,18 +816,18 @@ def ikFkMatch_with_namespace(namespace,
 
         transform.matchWorldTransform(fk_targets[1], upv_ctrl)
         # calculates new pole vector position
-        start_end = (fk_targets[-1].getTranslation(space="world") -
-                     fk_targets[0].getTranslation(space="world"))
-        start_mid = (fk_targets[1].getTranslation(space="world") -
-                     fk_targets[0].getTranslation(space="world"))
+        start_end = (fk_targets[-1].getTranslation(space="world")
+                     - fk_targets[0].getTranslation(space="world"))
+        start_mid = (fk_targets[1].getTranslation(space="world")
+                     - fk_targets[0].getTranslation(space="world"))
 
         dot_p = start_mid * start_end
         proj = float(dot_p) / float(start_end.length())
         proj_vector = start_end.normal() * proj
         arrow_vector = start_mid - proj_vector
         arrow_vector *= start_end.normal().length()
-        final_vector = (arrow_vector +
-                        fk_targets[1].getTranslation(space="world"))
+        final_vector = (arrow_vector
+                        + fk_targets[1].getTranslation(space="world"))
         upv_ctrl.setTranslation(final_vector, space="world")
 
         # sets blend attribute new value
@@ -1005,8 +1007,8 @@ def applyMirror(nameSpace, mirrorEntry):
             return
 
     try:
-        if (pm.attributeQuery(attr, node=node, shortName=True, exists=True) and
-                not node.attr(attr).isLocked()):
+        if (pm.attributeQuery(attr, node=node, shortName=True, exists=True)
+                and not node.attr(attr).isLocked()):
             node.attr(attr).set(val)
 
     except RuntimeError as e:
