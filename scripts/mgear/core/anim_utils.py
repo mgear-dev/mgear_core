@@ -219,7 +219,7 @@ def get_ik_fk_controls(control, blend_attr):
     for ctl in controls.split(","):
         if len(ctl) == 0:
             continue
-        ctl_type = ctl.split("_")[2]
+        ctl_type = ctl.split("_")[-2]
         # filters ik controls
         if "ik" in ctl_type or "upv" in ctl_type:
             ik_fk_controls["ik_controls"].append(ctl)
