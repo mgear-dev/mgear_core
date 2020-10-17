@@ -15,6 +15,8 @@ from mgear.vendor.Qt import QtSvg
 
 UI_EXT = "ui"
 
+_LOGICAL_DPI_KEY = "_LOGICAL_DPI"
+
 #################
 # Old qt importer
 #################
@@ -266,6 +268,7 @@ def get_icon_path(icon_name=None):
     else:
         return "{}/icons".format(file_dir)
 
+
 def get_icon(icon, size=24):
     """get svg icon from icon resources folder as a pixel map
     """
@@ -278,3 +281,36 @@ def get_icon(icon, size=24):
     pixmap = QtGui.QPixmap.fromImage(image)
 
     return pixmap
+
+
+# dpi scale test -------------------------------------------------------------
+def get_logicaldpi():
+    """attempting to "cache" the query to the maya main window for speed
+
+    Returns:
+        int: dpi of the monitor
+    """
+    if _LOGICAL_DPI_KEY not in os.environ.keys():
+        try:
+            logical_dpi = maya_main_window().logicalDpiX()
+        except Exception:
+            logical_dpi = 96
+        finally:
+            os.environ[_LOGICAL_DPI_KEY] = str(logical_dpi)
+    return int(os.environ.get(_LOGICAL_DPI_KEY)) or 96
+
+
+def dpi_scale(value, default=96, min_=1, max_=2):
+    """Scale the provided value by the scale that maya is using
+    which is derived from the 'average' dpi of 96 from windows, linux, osx.
+
+    Args:
+        value (int, float): value to scale
+        default (int, optional): assumed default from various platforms
+        min_ (int, optional): if you do not want the value under 96 dpi
+        max_ (int, optional): if you do not want a value higher than 200% scale
+
+    Returns:
+        # int, float: scaled value
+    """
+    return value * max(min_, min(get_logicaldpi() / float(default), max_))
