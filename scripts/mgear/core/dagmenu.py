@@ -68,25 +68,11 @@ def __mirror_flip_pose_callback(*args):
         mirrorPose(flip=args[1], nodes=[ctl])
 
 
-def __range_switch_callback(*args):
-    """ Wrapper function to call mGears range fk/ik switch function
-
-    Args:
-        list: callback from menuItem
-    """
-
-    # instance for the range switch util
-    range_switch = IkFkTransfer()
-
-    # switch_control = args[0].split("|")[-1].split(":")[-1]
-    switch_control = args[0].split("|")[-1]
-    blend_attr = args[1]
-
-    # gets root node for the given control
-    root = cmds.ls(args[0], long=True)[0].split("|")[1]
-
+def _get_controls(switch_control, blend_attr, comp_ctl_list=None):
     # first find controls from the ui host control
-    ik_fk_controls = get_ik_fk_controls(switch_control, blend_attr)
+    ik_fk_controls = get_ik_fk_controls(switch_control,
+                                        blend_attr,
+                                        comp_ctl_list)
 
     # organise ik controls
     ik_controls = {"ik_control": None,
@@ -100,17 +86,38 @@ def __range_switch_callback(*args):
     # - IKS
     for x in ik_fk_controls["ik_controls"]:
         control_name = x.split(":")[-1]
-        control_type = control_name.split("_")[-2]
-        if control_type == "ik":
+        # control_type = control_name.split("_")[-2]
+        if "_ik" in control_name.lower():
             ik_controls["ik_control"] = control_name
-        elif control_type == "upv":
+        elif "_upv" in control_name.lower():
             ik_controls["pole_vector"] = control_name
-        elif control_type == "ikRot":
+        elif "_ikrot" in control_name.lower():
             ik_controls["ik_rot"] = control_name
 
     # - FKS
     fk_controls = [x.split(":")[-1] for x in ik_fk_controls["fk_controls"]]
     fk_controls = sorted(fk_controls)
+
+    return ik_controls, fk_controls
+
+
+def __range_switch_callback(*args):
+    """ Wrapper function to call mGears range fk/ik switch function
+
+    Args:
+        list: callback from menuItem
+    """
+
+    # instance for the range switch util
+    range_switch = IkFkTransfer()
+
+    switch_control = args[0].split("|")[-1]
+    blend_attr = args[1]
+
+    # gets root node for the given control
+    root = cmds.ls(args[0], long=True)[0].split("|")[1]
+
+    ik_controls, fk_controls = _get_controls(switch_control, blend_attr)
 
     # calls the ui
     range_switch.showUI(model=root,
@@ -176,42 +183,33 @@ def __switch_fkik_callback(*args):
     # gets namespace
     namespace = getNamespace(switch_control)
 
-    # first find controls from the ui host control
-    ik_fk_controls = get_ik_fk_controls(switch_control, blend_attr)
+    # search criteria to find all the components sharing the blend
+    criteria = blend_attr.replace("_blend", "") + "_id*_ctl"
+    component_ctl = cmds.listAttr(switch_control,
+                                  ud=True,
+                                  string=criteria)
+    blend_fullname = "{}.{}".format(switch_control, blend_attr)
+    for i, comp_ctl_list in enumerate(component_ctl):
+        # we need to need to set the original blend value for each ik/fk match
+        if i == 0:
+            init_val = cmds.getAttr(blend_fullname)
+        else:
+            cmds.setAttr(blend_fullname, init_val)
+        print comp_ctl_list
 
-    # organise ik controls
-    ik_controls = {"ik_control": None,
-                   "pole_vector": None,
-                   "ik_rot": None
-                   }
+        ik_controls, fk_controls = _get_controls(switch_control,
+                                                 blend_attr,
+                                                 comp_ctl_list)
 
-    # removes namespace from controls and order them in something usable
-    # by the ikFkMatch function
-
-    # - IKS
-    for x in ik_fk_controls["ik_controls"]:
-        control_name = x.split(":")[-1]
-        control_type = control_name.split("_")[-2]
-        if control_type == "ik":
-            ik_controls["ik_control"] = control_name
-        elif control_type == "upv":
-            ik_controls["pole_vector"] = control_name
-        elif control_type == "ikRot":
-            ik_controls["ik_rot"] = control_name
-
-    # - FKS
-    fk_controls = [x.split(":")[-1] for x in ik_fk_controls["fk_controls"]]
-    fk_controls = sorted(fk_controls)
-
-    # runs switch
-    ikFkMatch_with_namespace(namespace=namespace,
-                             ikfk_attr=blend_attr,
-                             ui_host=switch_control,
-                             fks=fk_controls,
-                             ik=ik_controls["ik_control"],
-                             upv=ik_controls["pole_vector"],
-                             ik_rot=ik_controls["ik_rot"],
-                             key=keyframe)
+        # runs switch
+        ikFkMatch_with_namespace(namespace=namespace,
+                                 ikfk_attr=blend_attr,
+                                 ui_host=switch_control,
+                                 fks=fk_controls,
+                                 ik=ik_controls["ik_control"],
+                                 upv=ik_controls["pole_vector"],
+                                 ik_rot=ik_controls["ik_rot"],
+                                 key=keyframe)
 
 
 def __switch_parent_callback(*args):

@@ -190,8 +190,28 @@ def getControlers(model, gSuffix=CTRL_GRP_SUFFIX):
         return None
 
 
-def get_ik_fk_controls(control, blend_attr):
+def get_control_list(control, blend_attr, extension="_ctl"):
+
+    controls = None
+
+    controls_attribute = blend_attr.replace("_blend", extension)
+    try:
+        controls = cmds.getAttr("{}.{}".format(control, controls_attribute))
+    except ValueError:
+        if control == "world_ctl":
+            _msg = "New type attributes using world as host are not supported"
+            raise RuntimeError(_msg)
+        attr = "{}_{}_ctl".format(blend_attr.split("_")[0],
+                                  control.split(":")[-1].split("_")[1])
+        controls = cmds.getAttr("{}.{}".format(control, attr))
+
+    return controls
+
+
+def get_ik_fk_controls(control, blend_attr, comp_ctl_list=None):
     """ Returns the ik and fk controls related to the given control blend attr
+
+    OBSOLETE:This function is obsolete and just keep for backward compatibility
 
     Args:
         control (str): uihost control to interact with
@@ -204,30 +224,40 @@ def get_ik_fk_controls(control, blend_attr):
     ik_fk_controls = {"fk_controls": [],
                       "ik_controls": []}
 
-    controls_attribute = blend_attr.replace("_blend", "_ctl")
-    try:
-        controls = cmds.getAttr("{}.{}".format(control, controls_attribute))
-    except ValueError:
-        if control == "world_ctl":
-            _msg = "New type attributes using world as host are not supported"
-            raise RuntimeError(_msg)
-        attr = "{}_{}_ctl".format(blend_attr.split("_")[0],
-                                  control.split(":")[-1].split("_")[1])
-        controls = cmds.getAttr("{}.{}".format(control, attr))
+    if comp_ctl_list:
+        ctl_list = cmds.getAttr("{}.{}".format(control, comp_ctl_list))
+    else:
+        ctl_list = get_control_list(control, blend_attr)
 
     # filters the controls
-    for ctl in controls.split(","):
+    for ctl in ctl_list.split(","):
         if len(ctl) == 0:
             continue
-        ctl_type = ctl.split("_")[-2]
         # filters ik controls
-        if "ik" in ctl_type or "upv" in ctl_type:
+        if "_ik" in ctl.lower() or "_upv" in ctl:
             ik_fk_controls["ik_controls"].append(ctl)
         # filters fk controls
-        elif "fk" in ctl_type:
+        elif "_fk" in ctl.lower():
             ik_fk_controls["fk_controls"].append(ctl)
 
     return ik_fk_controls
+
+
+def get_ik_fk_controls_by_role(control, blend_attr):
+    """ Returns the ik fk controls sorted by role.
+     Using the new role attr tag
+
+     this makes obsolete get_ik_fk_controls() function.
+
+    Args:
+        control (str): uihost control to interact with
+        blend_attr (str): attribute containing control list
+
+    Returns:
+        dict: with the control sorted by role
+    """
+    # TODO
+    return
 
 
 def get_host_from_node(control):
