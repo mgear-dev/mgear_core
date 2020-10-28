@@ -117,16 +117,26 @@ def __range_switch_callback(*args):
     # gets root node for the given control
     root = cmds.ls(args[0], long=True)[0].split("|")[1]
 
-    ik_controls, fk_controls = _get_controls(switch_control, blend_attr)
+    # ik_controls, fk_controls = _get_controls(switch_control, blend_attr)
+    # search criteria to find all the components sharing the blend
+    criteria = blend_attr.replace("_blend", "") + "_id*_ctl"
+    component_ctl = cmds.listAttr(switch_control,
+                                  ud=True,
+                                  string=criteria)
+    if component_ctl:
 
-    # calls the ui
-    range_switch.showUI(model=root,
-                        ikfk_attr=blend_attr,
-                        uihost=stripNamespace(switch_control),
-                        fks=fk_controls,
-                        ik=ik_controls["ik_control"],
-                        upv=ik_controls["pole_vector"],
-                        ikRot=ik_controls["ik_rot"])
+        ik_controls, fk_controls = _get_controls(switch_control,
+                                                 blend_attr,
+                                                 component_ctl[0])
+
+        # calls the ui
+        range_switch.showUI(model=root,
+                            ikfk_attr=blend_attr,
+                            uihost=stripNamespace(switch_control),
+                            fks=fk_controls,
+                            ik=ik_controls["ik_control"],
+                            upv=ik_controls["pole_vector"],
+                            ikRot=ik_controls["ik_rot"])
 
 
 def __reset_attributes_callback(*args):
@@ -195,7 +205,6 @@ def __switch_fkik_callback(*args):
             init_val = cmds.getAttr(blend_fullname)
         else:
             cmds.setAttr(blend_fullname, init_val)
-        print comp_ctl_list
 
         ik_controls, fk_controls = _get_controls(switch_control,
                                                  blend_attr,
