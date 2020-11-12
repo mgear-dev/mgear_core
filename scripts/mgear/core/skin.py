@@ -114,10 +114,10 @@ def collectInfluenceWeights(skinCls, dagPath, components, dataDic):
         influenceWithoutNamespace = pm.PyNode(influenceName).stripNamespace()
         # build a dictionary of {vtx: weight}. Skip 0.0 weights.
         inf_w = {
-                jj: weights[jj * numInfluences + ii]
-                for jj in range(numComponentsPerInfluence)
-                if weights[jj * numInfluences + ii] != 0.0
-                }
+            jj: weights[jj * numInfluences + ii]
+            for jj in range(numComponentsPerInfluence)
+            if weights[jj * numInfluences + ii] != 0.0
+        }
         # cast to float to avoid rounding errors when dividing integers?
         dataDic['vertexCount'] = int(weights.length() / float(numInfluences))
         # cast influenceWithoutNamespace as string otherwise it can end up
@@ -131,10 +131,10 @@ def collectBlendWeights(skinCls, dagPath, components, dataDic):
     # round the weights down. This should be safe on Dual Quat blends
     # because it is not normalized. And 6 should be more than accurate enough.
     dataDic['blendWeights'] = {
-            i: round(weights[i], 6)
-            for i in range(weights.length())
-            if round(weights[i], 6) != 0.0
-            }
+        i: round(weights[i], 6)
+        for i in range(weights.length())
+        if round(weights[i], 6) != 0.0
+    }
 
 
 def collectData(skinCls, dataDic):
@@ -197,11 +197,11 @@ def exportSkin(filePath=None, objs=None, *args):
                 obj.name() + ": Skipped because don't have Skin Cluster")
             pass
         else:
-            #start by pruning by a tiny amount. Enough to not make a noticeable
-            #change to the skin, but it will remove infinitely small weights.
-            #Otherwise, compressing will do almost nothing!
+            # start by pruning by a tiny amount. Enough to not make a noticeable
+            # change to the skin, but it will remove infinitely small weights.
+            # Otherwise, compressing will do almost nothing!
             if isinstance(obj.getShape(), pm.nodetypes.Mesh):
-                #TODO: Implement pruning on nurbs. Less straight-forward
+                # TODO: Implement pruning on nurbs. Less straight-forward
                 pm.skinPercent(skinCls, obj, pruneWeights=0.001)
 
             dataDic = {'weights': {},
@@ -223,9 +223,9 @@ def exportSkin(filePath=None, objs=None, *args):
             exportMsg = "Exported skinCluster {} ({} influences, {} points) {}"
             pm.displayInfo(
                 exportMsg.format(skinCls.name(),
-                                len(dataDic['weights'].keys()),
-                                len(dataDic['blendWeights']),
-                                obj.name()))
+                                 len(dataDic['weights'].keys()),
+                                 len(dataDic['blendWeights']),
+                                 obj.name()))
 
     if packDic["objs"]:
         with open(filePath, 'w') as fp:
@@ -270,7 +270,7 @@ def exportSkinPack(packPath=None, objs=None, use_json=False, *args):
     if not packPath.endswith(PACK_EXT):
         pm.displayWarning("Not valid file extension for: {}".format(packPath))
         return
-            
+
     packDic["rootPath"], packName = os.path.split(packPath)
 
     for obj in objs:
@@ -348,7 +348,7 @@ def setBlendWeights(skinCls, dagPath, components, dataDic, compressed):
         # But the binary format is still an int, so cast the key to int.
         blendWeights = OpenMaya.MDoubleArray(dataDic['vertexCount'])
         for key, value in dataDic['blendWeights'].items():
-                blendWeights.set(value, int(key))
+            blendWeights.set(value, int(key))
     else:
         # The original weight format was a full list for every vertex
         # For backwards compatibility on older skin files:
@@ -448,7 +448,7 @@ def importSkin(filePath=None, *args):
 
             try:
                 # use getShapes() else meshes with 2+ shapes will fail.
-                #TODO: multiple shape nodes is not currently supported in
+                # TODO: multiple shape nodes is not currently supported in
                 # the file structure! It should raise an error.
                 # Also noIntermediate otherwise it will count shapeOrig nodes.
                 objShapes = objNode.getShapes(noIntermediate=True)
@@ -461,7 +461,7 @@ def importSkin(filePath=None, *args):
                 elif isinstance(objNode.getShape(), pm.nodetypes.NurbsCurve):
                     meshVertices = sum([len(shape.cv) for shape in objShapes])
                 else:
-                    #TODO: Implement other skinnable objs like lattices.
+                    # TODO: Implement other skinnable objs like lattices.
                     meshVertices = 0
 
                 if compressed:
@@ -469,8 +469,9 @@ def importSkin(filePath=None, *args):
                 else:
                     importedVertices = len(data['blendWeights'])
                 if meshVertices != importedVertices:
-                    warningMsg = 'Vertex counts do not match. {} != {}'
-                    pm.displayWarning(warningMsg.format(meshVertices,
+                    warningMsg = 'Vertex counts on {} do not match. {} != {}'
+                    pm.displayWarning(warningMsg.format(objName,
+                                                        meshVertices,
                                                         importedVertices))
                     continue
             except Exception:
