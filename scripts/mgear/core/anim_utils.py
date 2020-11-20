@@ -838,7 +838,7 @@ def ikFkMatch_with_namespace(namespace,
 
         o_attr.set(0.0)
 
-    # if is FKw then sanp IK
+    # if is FK then sanp IK
     elif val == 0.0:
         transform.matchWorldTransform(ik_target, ik_ctrl)
         if ik_rot:
@@ -856,6 +856,11 @@ def ikFkMatch_with_namespace(namespace,
         proj_vector = start_end.normal() * proj
         arrow_vector = start_mid - proj_vector
         arrow_vector *= start_end.normal().length()
+
+        # ensure that the pole vector distance is a minimun of 1 unit
+        while arrow_vector.length() < 1.0:
+            arrow_vector *= 2.0
+
         final_vector = (arrow_vector
                         + fk_targets[1].getTranslation(space="world"))
         upv_ctrl.setTranslation(final_vector, space="world")
