@@ -222,8 +222,6 @@ class DragQListView(QtWidgets.QListView):
         dropAction = drag.start(QtCore.Qt.MoveAction)
         if not dropAction == QtCore.Qt.MoveAction:
             pos = QtGui.QCursor.pos()
-            # qApp = QtWidgets.QApplication.instance()
-            # widget = qApp.widgetAt(pos)
             widget = QtWidgets.QApplication.widgetAt(pos)
             if self.ignore_self and (
                     widget is self
