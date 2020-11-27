@@ -243,21 +243,41 @@ def get_ik_fk_controls(control, blend_attr, comp_ctl_list=None):
     return ik_fk_controls
 
 
-def get_ik_fk_controls_by_role(control, blend_attr):
+def get_ik_fk_controls_by_role(uiHost, attr_ctl_cnx):
     """ Returns the ik fk controls sorted by role.
      Using the new role attr tag
 
      this makes obsolete get_ik_fk_controls() function.
 
     Args:
-        control (str): uihost control to interact with
-        blend_attr (str): attribute containing control list
+        uiHost (str): uihost control to interact with
+        attr_ctl_cnx (str): attribute containing control list
 
     Returns:
         dict: with the control sorted by role
     """
-    # TODO
-    return
+    ik_controls = {"ik_control": None,
+                   "pole_vector": None,
+                   "ik_rot": None
+                   }
+    fk_controls = []
+    uiHost = pm.PyNode(uiHost)
+    if uiHost.hasAttr(attr_ctl_cnx):
+        cnxs = uiHost.attr(attr_ctl_cnx).listConnections()
+        if cnxs:
+            for c in cnxs:
+                role = c.ctl_role.get()
+                if "fk" in role:
+                    fk_controls.append(c.stripNamespace())
+                elif role == "upv":
+                    ik_controls["pole_vector"] = c.stripNamespace()
+                elif role == "ik":
+                    ik_controls["ik_control"] = c.stripNamespace()
+                elif role == "ik":
+                    ik_controls["ikRot"] = c.stripNamespace()
+
+    fk_controls = sorted(fk_controls)
+    return ik_controls, fk_controls
 
 
 def get_host_from_node(control):
@@ -800,9 +820,16 @@ def ikFkMatch_with_namespace(namespace,
     # returns matching node
     def _get_mth(name):
         # type: (str) -> pm.nodetypes.Transform
-        tmp = name.split("_")
-        tmp[-1] = "mth"
-        return _get_node("_".join(tmp))
+        node = _get_node(name)
+        if node.hasAttr("match_ref"):
+            match_node = node.match_ref.listConnections()
+            if match_node:
+                print match_node[0]
+                return match_node[0]
+        else:
+            tmp = name.split("_")
+            tmp[-1] = "mth"
+            return _get_node("_".join(tmp))
 
     # get things ready
     fk_ctrls = [_get_node(x) for x in fks]

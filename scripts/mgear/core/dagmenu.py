@@ -22,6 +22,7 @@ from mgear.core.anim_utils import get_host_from_node
 from mgear.core.anim_utils import change_rotate_order
 from mgear.core.anim_utils import ikFkMatch_with_namespace
 from mgear.core.anim_utils import get_ik_fk_controls
+from mgear.core.anim_utils import get_ik_fk_controls_by_role
 from mgear.core.anim_utils import IkFkTransfer
 from mgear.core.anim_utils import changeSpace
 from mgear.core.anim_utils import getNamespace
@@ -69,6 +70,10 @@ def __mirror_flip_pose_callback(*args):
 
 
 def _get_controls(switch_control, blend_attr, comp_ctl_list=None):
+    # OBSOLETE:This function is obsolete and just keep for
+    #          backward compatibility
+    # replaced by get_ik_fk_controls_by_role in anim_utils module
+
     # first find controls from the ui host control
     ik_fk_controls = get_ik_fk_controls(switch_control,
                                         blend_attr,
@@ -194,7 +199,7 @@ def __switch_fkik_callback(*args):
     namespace = getNamespace(switch_control)
 
     # search criteria to find all the components sharing the blend
-    criteria = blend_attr.replace("_blend", "") + "_id*_ctl"
+    criteria = blend_attr.replace("_blend", "") + "_id*_ctl_cnx"
     component_ctl = cmds.listAttr(switch_control,
                                   ud=True,
                                   string=criteria)
@@ -206,9 +211,8 @@ def __switch_fkik_callback(*args):
         else:
             cmds.setAttr(blend_fullname, init_val)
 
-        ik_controls, fk_controls = _get_controls(switch_control,
-                                                 blend_attr,
-                                                 comp_ctl_list)
+        ik_controls, fk_controls = get_ik_fk_controls_by_role(switch_control,
+                                                              comp_ctl_list)
 
         # runs switch
         ikFkMatch_with_namespace(namespace=namespace,
