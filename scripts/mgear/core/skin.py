@@ -482,8 +482,10 @@ def importSkin(filePath=None, *args):
             else:
                 try:
                     joints = data['weights'].keys()
+                    # strip | from longName, or skinCluster command may fail.
+                    skinName = data['skinClsName'].replace('|','')
                     skinCluster = pm.skinCluster(
-                        joints, objNode, tsb=True, nw=2, n=data['skinClsName'])
+                        joints, objNode, tsb=True, nw=2, n=skinName)
                 except Exception:
                     sceneJoints = set([pm.PyNode(x).name()
                                        for x in pm.ls(type='joint')])
@@ -553,17 +555,19 @@ def skinCopy(sourceMesh=None, targetMesh=None, *args):
         if ss:
             skinMethod = ss.skinningMethod.get()
             oDef = pm.skinCluster(sourceMesh, query=True, influence=True)
+            # strip | from longName, or skinCluster command may fail.
+            skinName = targetMesh.name().replace('|','') + "_SkinCluster"
             skinCluster = pm.skinCluster(oDef,
                                          targetMesh,
                                          tsb=True,
                                          nw=1,
                                          n=targetMesh.name() + "_SkinCluster")
-            pm.copySkinWeights(ss=ss.stripNamespace(),
-                               ds=skinCluster.name(),
+            pm.copySkinWeights(sourceSkin=ss.stripNamespace(),
+                               destinationSkin=skinCluster.name(),
                                noMirror=True,
-                               ia="oneToOne",
-                               sm=True,
-                               nr=True)
+                               influenceAssociation="oneToOne",
+                               smooth=True,
+                               normalize=True)
             skinCluster.skinningMethod.set(skinMethod)
         else:
             errorMsg = "Source Mesh : {} doesn't have a skinCluster."
