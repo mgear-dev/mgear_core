@@ -824,7 +824,6 @@ def ikFkMatch_with_namespace(namespace,
         if node.hasAttr("match_ref"):
             match_node = node.match_ref.listConnections()
             if match_node:
-                print match_node[0]
                 return match_node[0]
         else:
             tmp = name.split("_")
@@ -1649,35 +1648,55 @@ class IkFkTransfer(AbstractAnimationTransfer):
 
     def _getMth(self, name):
         # type: (str) -> pm.nodetypes.Transform
-
-        tmp = name.split("_")
-        tmp[-1] = "mth"
-        return self._getNode("_".join(tmp))
+        node = self._getNode(name)
+        if node.hasAttr("match_ref"):
+            match_node = node.match_ref.listConnections()
+            if match_node:
+                return match_node[0]
+        else:
+            tmp = name.split("_")
+            tmp[-1] = "mth"
+            return self._getNode("_".join(tmp))
 
     def setCtrls(self, fks, ik, upv, ikRot):
         # type: (list[str], str, str) -> None
         """gather core PyNode represented each controllers"""
 
+        if not isinstance(ik, list):
+            ik = [ik]
+        if not isinstance(upv, list):
+            upv = [upv]
+
         self.fkCtrls = [self._getNode(x) for x in fks]
         self.fkTargets = [self._getMth(x) for x in fks]
 
-        self.ikCtrl = self._getNode(ik)
-        self.ikTarget = self._getMth(ik)
+        self.ikCtrl = [self._getNode(x) for x in ik]
+        self.ikTarget = [self._getMth(x) for x in ik]
 
-        self.upvCtrl = self._getNode(upv)
-        self.upvTarget = self._getMth(upv)
+        self.upvCtrl = [self._getNode(x) for x in upv]
+        self.upvTarget = [self._getMth(x) for x in upv]
 
         if ikRot:
-            self.ikRotCtl = self._getNode(ikRot)
-            self.ikRotTarget = self._getMth(ikRot)
+            # self.ikRotCtl = self._getNode(ikRot)
+            # self.ikRotTarget = self._getMth(ikRot)
+            if not isinstance(ikRot, list):
+                ikRot = [ikRot]
+
+            self.ikRotCtl = [self._getNode(x) for x in ikRot]
+            self.ikRotTarget = [self._getMth(x) for x in ikRot]
             self.hasIkRot = True
         else:
             self.hasIkRot = False
 
     def setGroupBoxTitle(self):
         if hasattr(self, "groupBox"):
-            # TODO: extract logic with naming convention
-            part = "_".join(self.ikCtrl.name().split(":")[-1].split("_")[:-2])
+            if len(self.ikCtrl) == 1:
+                # TODO: extract logic with naming convention
+                part = "_".join(self.ikCtrl[0].name().split(
+                    ":")[-1].split("_")[:-2])
+            else:
+                part = "MULTI Transfer"
+
             self.groupBox.setTitle(part)
 
     # ----------------------------------------------------------------
@@ -1696,16 +1715,16 @@ class IkFkTransfer(AbstractAnimationTransfer):
             if "fk" in switchTo.lower():
 
                 val_src_nodes = self.fkTargets
-                key_src_nodes = [self.ikCtrl, self.upvCtrl]
+                key_src_nodes = self.ikCtrl + self.upvCtrl
                 key_dst_nodes = self.fkCtrls
                 if ikRot:
                     key_src_nodes.append(self.ikRotCtl)
 
             else:
 
-                val_src_nodes = [self.ikTarget, self.upvTarget]
+                val_src_nodes = self.ikTarget + self.upvTarget
                 key_src_nodes = self.fkCtrls
-                key_dst_nodes = [self.ikCtrl, self.upvCtrl]
+                key_dst_nodes = self.ikCtrl + self.upvCtrl
                 if ikRot:
                     val_src_nodes.append(self.ikRotTarget)
                     key_dst_nodes.append(self.ikRotCtl)
@@ -1719,25 +1738,26 @@ class IkFkTransfer(AbstractAnimationTransfer):
             if self.comboBoxSpaces.currentIndex() != 0:  # to FK
 
                 val_src_nodes = self.fkTargets
-                key_src_nodes = [self.ikCtrl, self.upvCtrl]
+                key_src_nodes = self.ikCtrl + self.upvCtrl
                 key_dst_nodes = self.fkCtrls
                 if ikRot:
                     key_src_nodes.append(self.ikRotCtl)
 
             else:  # to IK
 
-                val_src_nodes = [self.ikTarget, self.upvTarget]
+                val_src_nodes = self.ikTarget + self.upvTarget
                 key_src_nodes = self.fkCtrls
-                key_dst_nodes = [self.ikCtrl, self.upvCtrl]
+                key_dst_nodes = self.ikCtrl + self.upvCtrl
                 if ikRot:
-                    val_src_nodes.append(self.ikRotTarget)
-                    key_dst_nodes.append(self.ikRotCtl)
+                    # val_src_nodes.append(self.ikRotTarget)
+                    # key_dst_nodes.append(self.ikRotCtl)
+                    val_src_nodes = val_src_nodes + self.ikRotTarget
+                    key_dst_nodes = key_dst_nodes + self.ikRotCtl
 
                 # reset roll channel:
                 roll_att = self.getChangeRollAttrName()
                 pm.cutKey(roll_att, time=(startFrame, endFrame))
                 pm.setAttr(roll_att, 0)
-
         self.bakeAnimation(self.getChangeAttrName(),
                            val_src_nodes,
                            key_src_nodes,

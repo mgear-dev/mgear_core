@@ -124,24 +124,34 @@ def __range_switch_callback(*args):
 
     # ik_controls, fk_controls = _get_controls(switch_control, blend_attr)
     # search criteria to find all the components sharing the blend
-    criteria = blend_attr.replace("_blend", "") + "_id*_ctl"
+    criteria = blend_attr.replace("_blend", "") + "_id*_ctl_cnx"
     component_ctl = cmds.listAttr(switch_control,
                                   ud=True,
                                   string=criteria)
     if component_ctl:
+        ik_list = []
+        ikRot_list = []
+        fk_list = []
+        upv_list = []
 
-        ik_controls, fk_controls = _get_controls(switch_control,
-                                                 blend_attr,
-                                                 component_ctl[0])
+        for com_list in component_ctl:
+            # set the initial val for the blend attr in each iteration
+            ik_controls, fk_controls = get_ik_fk_controls_by_role(
+                switch_control, com_list)
+            ik_list.append(ik_controls["ik_control"])
+            if ik_controls["ik_rot"]:
+                ikRot_list.append(ik_controls["ik_rot"])
+            upv_list.append(ik_controls["pole_vector"])
+            fk_list = fk_list + fk_controls
 
         # calls the ui
         range_switch.showUI(model=root,
                             ikfk_attr=blend_attr,
                             uihost=stripNamespace(switch_control),
-                            fks=fk_controls,
-                            ik=ik_controls["ik_control"],
-                            upv=ik_controls["pole_vector"],
-                            ikRot=ik_controls["ik_rot"])
+                            fks=fk_list,
+                            ik=ik_list,
+                            upv=upv_list,
+                            ikRot=ikRot_list)
 
 
 def __reset_attributes_callback(*args):
