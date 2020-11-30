@@ -591,51 +591,62 @@ def getComboIndex(model, object_name, combo_attr):
 
 
 def changeSpace_with_namespace(namespace,
-                               object_name,
+                               uiHost,
                                combo_attr,
                                cnsIndex,
-                               ctl_name):
+                               ctl_names):
     """Change the space of a control
 
     i.e: A control with ik reference array
 
     Args:
         namespace (str): namespace
-        object_name (str): Object Name
+        uiHost (str): uiHost Name with the switch attr
         combo_attr (str): Combo attribute name
         cnsIndex (int): Combo index to change
-        ctl_name (str): Control name
+        ctl_names ([str]): names of the target controls
     """
-    if namespace:
-        node = getNode(namespace + ":" + stripNamespace(object_name))
-        ctl = getNode(namespace + ":" + stripNamespace(ctl_name))
-    else:
-        node = getNode(object_name)
-        ctl = getNode(ctl_name)
+    if not isinstance(ctl_names, list):
+        ctl_names = [ctl_names]
 
-    sWM = ctl.getMatrix(worldSpace=True)
+    if namespace:
+        node = getNode(namespace + ":" + stripNamespace(uiHost))
+    else:
+        node = getNode(uiHost)
+
+    sWM = []
+    controls = []
+    for e, c_name in enumerate(ctl_names):
+        if namespace:
+            ctl = getNode(namespace + ":" + stripNamespace(c_name))
+        else:
+            ctl = getNode(c_name)
+
+        sWM.append(ctl.getMatrix(worldSpace=True))
+        controls.append(ctl)
 
     oAttr = node.attr(combo_attr)
-
     oAttr.set(cnsIndex)
-    ctl.setMatrix(sWM, worldSpace=True)
+
+    for e, ctl in enumerate(controls):
+        ctl.setMatrix(sWM[e], worldSpace=True)
 
 
-def changeSpace(model, object_name, combo_attr, cnsIndex, ctl_name):
+def changeSpace(model, uiHost, combo_attr, cnsIndex, ctl_names):
     """Change the space of a control
 
     i.e: A control with ik reference array
 
     Args:
         model (PyNode): Rig top node
-        object_name (str): Object Name
+        uiHost (str): uiHost Name with the switch attr
         combo_attr (str): Combo attribute name
         cnsIndex (int): Combo index to change
-        ctl_name (str): Control name
+        ctl_names ([str]]): Name of the target controls
     """
     nameSpace = getNamespace(model)
-    return changeSpace_with_namespace(nameSpace, object_name, combo_attr,
-                                      cnsIndex, ctl_name)
+    return changeSpace_with_namespace(nameSpace, uiHost, combo_attr,
+                                      cnsIndex, ctl_names)
 
 
 def change_rotate_order(control, target_order):

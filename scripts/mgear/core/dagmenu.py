@@ -249,27 +249,49 @@ def __switch_parent_callback(*args):
 
     # switch_control = args[0].split("|")[-1].split(":")[-1]
     switch_control = args[0].split("|")[-1]
+    uiHost = pm.PyNode(switch_control)  # UiHost is switch PyNode pointer
     switch_attr = args[1]
     switch_idx = args[2]
     search_token = switch_attr.split("_")[-1].split("ref")[0].split("Ref")[0]
+    print search_token
     target_control = None
-    controls_attr = "{}_{}_{}".format(
-        switch_attr.split("_")[0],
-        switch_control.split(":")[-1].split("_")[1],
-        switch_control.split(":")[-1].split("_")[2])
-    _controls = cmds.getAttr("{}.{}".format(args[0], controls_attr))
 
-    # search for target control
-    for ctl in _controls.split(","):
-        if len(ctl) == 0:
-            continue
-        if ctl.split("_")[2] == search_token:
-            target_control = ctl
-            break
-        elif (search_token in control_map.keys()
-              and ctl.split("_")[2] == control_map[search_token]):
-            target_control = ctl
-            break
+    # control_01 attr don't standard name ane need to be check
+    attr_split_name = switch_attr.split("_")
+    if len(attr_split_name) <= 2:
+        attr_name = attr_split_name[0]
+    else:
+        attr_name = "_".join(attr_split_name[:-1])
+    # search criteria to find all the components sharing the name
+    criteria = attr_name + "_id*_ctl_cnx"
+    component_ctl = cmds.listAttr(switch_control,
+                                  ud=True,
+                                  string=criteria)
+
+    target_control_list = []
+    for comp_ctl_list in component_ctl:
+
+        # first search for tokens match in all controls. If not token is found
+        # we will use all controls for the switch
+        # this token match is a filter for components like arms or legs
+        for ctl in uiHost.attr(comp_ctl_list).listConnections():
+            if ctl.ctl_role.get() == search_token:
+                target_control = ctl.stripNamespace()
+                break
+            elif (search_token in control_map.keys()
+                  and ctl.ctl_role.get() == control_map[search_token]):
+                target_control = ctl.stripNamespace()
+                break
+
+        if target_control:
+            target_control_list.append(target_control)
+        else:
+            # token didn't match with any target control. We will add all
+            # found controls for the match.
+            # This is needed for regular ik match in Control_01
+            for ctl in uiHost.attr(comp_ctl_list).listConnections():
+
+                target_control_list.append(ctl.stripNamespace())
 
     # gets root node for the given control
     namespace_value = args[0].split("|")[-1].split(":")
@@ -296,26 +318,33 @@ def __switch_parent_callback(*args):
             except TypeError:
                 break
 
-    if not root or not target_control:
+    if not root or not target_control_list:
+        pm.displayInfo("Not root or target control list for space transfer")
         return
 
     autokey = cmds.listConnections("{}.{}".format(switch_control, switch_attr),
                                    type="animCurve")
 
     if autokey:
-        cmds.setKeyframe("{}:{}".format(
-            namespace_value, target_control), "{}.{}"
-            .format(switch_control, switch_attr),
-            time=(cmds.currentTime(query=True) - 1.0))
+        for target_control in target_control_list:
+            cmds.setKeyframe("{}:{}".format(
+                namespace_value, target_control), "{}.{}"
+                .format(switch_control, switch_attr),
+                time=(cmds.currentTime(query=True) - 1.0))
 
     # triggers switch
-    changeSpace(root, switch_control, switch_attr, switch_idx, target_control)
+    changeSpace(root,
+                switch_control,
+                switch_attr,
+                switch_idx,
+                target_control_list)
 
     if autokey:
-        cmds.setKeyframe("{}:{}".format(
-            namespace_value, target_control), "{}.{}"
-            .format(switch_control, switch_attr),
-            time=(cmds.currentTime(query=True)))
+        for target_control in target_control_list:
+            cmds.setKeyframe("{}:{}".format(
+                namespace_value, target_control), "{}.{}"
+                .format(switch_control, switch_attr),
+                time=(cmds.currentTime(query=True)))
 
 
 def get_option_var_state():
