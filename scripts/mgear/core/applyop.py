@@ -15,6 +15,8 @@ Operators are any node that connected to other nodes creates a rig behaviour::
 import pymel.core as pm
 from pymel.core import datatypes
 
+import maya.api.OpenMaya as om
+
 #############################################
 # BUILT IN NODES
 #############################################
@@ -245,6 +247,44 @@ def aimCns(obj,
 #############################################
 # CUSTOM NODES
 #############################################
+
+
+def gear_matrix_cns(in_obj,
+                    out_obj=None,
+                    connect_srt='srt',
+                    rot_off=[0, 0, 0],
+                    scl_off=[1, 1, 1]):
+
+    node = pm.createNode("mgear_matrixConstraint")
+    pm.connectAttr(
+        in_obj + ".worldMatrix[0]", node + ".driverMatrix", force=True)
+
+    if out_obj:
+        pm.connectAttr(out_obj + ".parentInverseMatrix[0]",
+                       node + ".drivenParentInverseMatrix", force=True)
+
+        # calculate rest pose
+        driver_m = om.MMatrix(pm.getAttr(
+            in_obj + ".worldMatrix[0]"))
+        driven_m = om.MMatrix(pm.getAttr(
+            out_obj + ".parentInverseMatrix[0]"))
+        mult = driver_m * driven_m
+        pm.setAttr(node + ".drivenRestMatrix", mult, type="matrix")
+
+        # connect srt (scale, rotation, translation)
+        if 't' in connect_srt:
+            pm.connectAttr(node.translate,
+                           out_obj.attr("translate"), f=True)
+        if 'r' in connect_srt:
+            pm.connectAttr(node.rotate,
+                           out_obj.attr("rotate"), f=True)
+        if 's' in connect_srt:
+            pm.connectAttr(node.scale,
+                           out_obj.attr("scale"), f=True)
+            pm.connectAttr(node.shear,
+                           out_obj.attr("shear"), f=True)
+
+    return node
 
 
 def gear_spring_op(in_obj, goal=False):
