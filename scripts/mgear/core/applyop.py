@@ -253,11 +253,37 @@ def gear_matrix_cns(in_obj,
                     out_obj=None,
                     connect_srt='srt',
                     rot_off=[0, 0, 0],
-                    scl_off=[1, 1, 1]):
+                    rot_mult=[1, 1, 1],
+                    scl_mult=[1, 1, 1]):
+    """Create and connect matrix constraint node
 
+    Args:
+        in_obj (transform): the driver object
+        out_obj (transform, optional): the driven object
+        connect_srt (str, optional): scale rotation traanslation flag
+        rot_off (list, optional): rotation offset for XYZ
+        rot_mult (list, optional): rotation multiplier for XYZ
+        scl_mult (list, optional): scale multiplier for XYZ
+
+    Returns:
+        PyNode: The matrix constraint node
+    """
     node = pm.createNode("mgear_matrixConstraint")
     pm.connectAttr(
         in_obj + ".worldMatrix[0]", node + ".driverMatrix", force=True)
+
+    # setting rot and scl config
+    node.rotationOffsetX.set(rot_off[0])
+    node.rotationOffsetY.set(rot_off[1])
+    node.rotationOffsetZ.set(rot_off[2])
+
+    node.rotationMultX.set(rot_mult[0])
+    node.rotationMultY.set(rot_mult[1])
+    node.rotationMultZ.set(rot_mult[2])
+
+    node.scaleMultX.set(scl_mult[0])
+    node.scaleMultY.set(scl_mult[1])
+    node.scaleMultZ.set(scl_mult[2])
 
     if out_obj:
         pm.connectAttr(out_obj + ".parentInverseMatrix[0]",
