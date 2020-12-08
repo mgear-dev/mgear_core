@@ -290,8 +290,10 @@ def gear_matrix_cns(in_obj,
                        node + ".drivenParentInverseMatrix", force=True)
 
         # calculate rest pose
+        # we use the  outputDriverOffsetMatrix to have in account the offset
+        # rotation when the rest pose is calculated
         driver_m = om.MMatrix(pm.getAttr(
-            in_obj + ".worldMatrix[0]"))
+            node + ".outputDriverOffsetMatrix"))
         driven_m = om.MMatrix(pm.getAttr(
             out_obj + ".parentInverseMatrix[0]"))
         mult = driver_m * driven_m
