@@ -273,9 +273,9 @@ def gear_matrix_cns(in_obj,
         in_obj + ".worldMatrix[0]", node + ".driverMatrix", force=True)
 
     # setting rot and scl config
-    node.rotationOffsetX.set(rot_off[0])
-    node.rotationOffsetY.set(rot_off[1])
-    node.rotationOffsetZ.set(rot_off[2])
+    node.driverRotationOffsetX.set(rot_off[0])
+    node.driverRotationOffsetY.set(rot_off[1])
+    node.driverRotationOffsetZ.set(rot_off[2])
 
     node.rotationMultX.set(rot_mult[0])
     node.rotationMultY.set(rot_mult[1])
