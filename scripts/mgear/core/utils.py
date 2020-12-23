@@ -65,19 +65,21 @@ def gatherCustomModuleDirectories(envvarkey,
     """
     results = {}
 
-    # default path
-    if not os.path.exists(defaultModulePath):
-        message = "= GEAR RIG SYSTEM ====== notify:"
-        message += "\n  default module directory is not " \
-                   "found at {}".format(defaultModulePath)
-        message += "\n\n check your mGear installation"
-        message += " or call your system administrator."
-        message += "\n"
-        mgear.log(message, mgear.sev_error)
-        return {}
+    # from default path
+    if not isinstance(defaultModulePath, list):
+        defaultModulePath = [defaultModulePath]
+    for dp in defaultModulePath:
+        if not os.path.exists(dp):
+            message = "= GEAR RIG SYSTEM ====== notify:"
+            message += "\n  default module directory is not " \
+                       "found at {}".format(dp)
+            message += "\n\n check your mGear installation"
+            message += " or call your system administrator."
+            message += "\n"
+            mgear.log(message, mgear.sev_error)
+            return {}
 
-    modules = sorted(os.listdir(defaultModulePath))
-    results[defaultModulePath] = modules
+        results[dp] = sorted(os.listdir(dp))
 
     # from environment variables
     envvarval = os.environ.get(envvarkey, "")
@@ -150,7 +152,8 @@ def importFromStandardOrCustomDirectories(directories,
     except ImportError:
         moduleBasePath = getModuleBasePath(directories, moduleName)
         module_name = customFormatter.format(moduleName)
-        sys.path.append(pm.dirmap(cd=moduleBasePath))
+        if pm.dirmap(cd=moduleBasePath) not in sys.path:
+            sys.path.append(pm.dirmap(cd=moduleBasePath))
         module = __import__(module_name, globals(), locals(), ["*"], -1)
 
     return module
