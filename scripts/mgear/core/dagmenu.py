@@ -508,8 +508,8 @@ def mgear_dagmenu_fill(parent_menu, current_control):
                                   _current_selection),
                   image="holder.svg")
 
-    # reset all bellow
-    cmds.menuItem(parent=parent_menu, label="Reset all bellow",
+    # reset all below
+    cmds.menuItem(parent=parent_menu, label="Reset all below",
                   command=partial(reset_all_keyable_attributes,
                                   child_controls))
 
@@ -535,7 +535,7 @@ def mgear_dagmenu_fill(parent_menu, current_control):
                                   _current_selection,
                                   False),
                   image="redrawPaintEffects.png")
-    cmds.menuItem(parent=parent_menu, label="Mirror all bellow",
+    cmds.menuItem(parent=parent_menu, label="Mirror all below",
                   command=partial(__mirror_flip_pose_callback,
                                   child_controls,
                                   False))
@@ -546,7 +546,7 @@ def mgear_dagmenu_fill(parent_menu, current_control):
                                   _current_selection,
                                   True),
                   image="redo.png")
-    cmds.menuItem(parent=parent_menu, label="Flip all bellow",
+    cmds.menuItem(parent=parent_menu, label="Flip all below",
                   command=partial(__mirror_flip_pose_callback,
                                   child_controls,
                                   True))
@@ -621,7 +621,7 @@ def mgear_dagmenu_fill(parent_menu, current_control):
     cmds.menuItem(parent=parent_menu, label="Select all controls",
                   command=partial(__select_nodes_callback, all_rig_controls))
 
-    # key all bellow function
+    # key all below function
     cmds.menuItem(parent=parent_menu, label="Keyframe child controls",
                   command=partial(__keyframe_nodes_callback, child_controls),
                   image="setKeyframe.png")
