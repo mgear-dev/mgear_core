@@ -354,10 +354,11 @@ def listAttrForMirror(node):
         list: Attributes to invert
     """
     # TODO: should "ro" be here?
-    res = ["tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz"]
+    res = ["tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz", "ro"]
     res.extend(pm.listAttr(node, userDefined=True, shortNames=True))
     res = list(filter(lambda x: not x.startswith("inv"), res))
-
+    res = list(filter(lambda x: node.attr(x).type()
+                      not in ["message", "string"], res))
     return res
 
 
@@ -1124,7 +1125,6 @@ def calculateMirrorData(srcNode, targetNode, flip=False):
     Returns:
         [{"target": node, "attr": at, "val": flipVal}]
     """
-
     results = []
 
     # mirror attribute of source
