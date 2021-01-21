@@ -71,6 +71,26 @@ def isSideElement(name):
         return False
 
 
+def isSideNode(node):
+    """Returns is name(str) side element?
+
+    Arguments:
+        name (node): PyNode
+
+    Returns:
+        bool
+    """
+
+    if node.hasAttr("side_label"):
+        if node.side_label.get() in "LR":
+            return True
+        else:
+            return False
+
+    else:
+        return isSideElement(node.name())
+
+
 def swapSideLabel(name):
     """Returns fliped name
 
@@ -97,6 +117,37 @@ def swapSideLabel(name):
             return name.replace("_R_", "_L_")
         else:
             return name
+
+
+def swapSideLabelNode(node):
+    """Returns fliped name of a node
+
+    Returns fliped name that replaced side label left to right or
+    right to left
+
+    Arguments:
+        name(node): pyNode
+
+    Returns:
+        str
+    """
+
+    if node.hasAttr("side_label"):
+        side = node.side_label.get()
+        if side in "LR":
+            # custom side label
+            c_side = node.attr("{}_custom_side_label".format(side)).get()
+            # mirror side label
+            if side == "L":
+                cm_side = node.attr("R_custom_side_label").get()
+            elif side == "R":
+                cm_side = node.attr("L_custom_side_label").get()
+            return node.stripNamespace().replace(c_side, cm_side)
+        else:
+            return node.stripNamespace()
+
+    else:
+        return swapSideLabel(node.stripNamespace())
 
 
 def getClosestNode(node, nodesToQuery):
@@ -1055,6 +1106,10 @@ def mirrorPose(flip=False, nodes=None):
 
     except Exception as e:
         pm.displayWarning("Flip/Mirror pose fail")
+        pm.displayWarning(
+            "If you are using Custom naming rules in controls. "
+            "It is possible that the name configuration makes hard to track "
+            "the correct object to mirror for {}".format(oSel.name()))
         import traceback
         traceback.print_exc()
         print e
@@ -1100,10 +1155,10 @@ def gatherMirrorData(nameSpace, node, flip):
     Returns:
         [dict[str]: The mirror data
     """
-    if isSideElement(node.name()):
+    if isSideNode(node):
 
-        nameParts = stripNamespace(node.name()).split("|")[-1]
-        nameParts = swapSideLabel(nameParts)
+        # nameParts = stripNamespace(node.name()).split("|")[-1]
+        nameParts = swapSideLabelNode(node)
         nameTarget = ":".join([nameSpace, nameParts])
 
         oTarget = getNode(nameTarget)
@@ -1164,7 +1219,6 @@ def calculateMirrorData(srcNode, targetNode, flip=False):
         results.append({"target": targetNode,
                         "attr": invAttrName,
                         "val": srcNode.attr(attrName).get() * inv})
-
     return results
 
 
