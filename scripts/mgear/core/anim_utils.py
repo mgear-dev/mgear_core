@@ -132,6 +132,13 @@ def swapSideLabelNode(node):
         str
     """
 
+    # first check default swapSideLabel. For defaul Shifter naming system
+    name = node.name()
+    sw_name = swapSideLabel(name)
+    if name != sw_name:
+        return sw_name
+
+    # try to find the mirror using custom side labels
     if node.hasAttr("side_label"):
         side = node.side_label.get()
         if side in "LR":
