@@ -133,7 +133,7 @@ def swapSideLabelNode(node):
     """
 
     # first check default swapSideLabel. For defaul Shifter naming system
-    name = node.name()
+    name = node.stripNamespace()
     sw_name = swapSideLabel(name)
     if name != sw_name:
         return sw_name
