@@ -95,6 +95,7 @@ def convertRLName(name):
     re_str = "_[RLrl][0-9]+_|^[RLrl][0-9]+_"
     re_str = re_str + "|_[RLrl][0-9]+$|_[RLrl]_|^[RLrl]_|_[RLrl]$"
     re_str = re_str + "|_[RLrl][.]|^[RLrl][.]"
+    re_str = re_str + "|_[RLrl][0-9]+[.]|^[RLrl][0-9]+[.]"
     rePattern = re.compile(re_str)
 
     reMatch = re.search(rePattern, name)
