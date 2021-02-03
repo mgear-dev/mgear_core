@@ -84,7 +84,17 @@ def convertRLName(name):
         return "R"
     elif name == "R":
         return "L"
-    re_str = "_[RL][0-9]+_|^[RL][0-9]+_|_[RL][0-9]+$|_[RL]_|^[RL]_|_[RL]$"
+    elif name == "l":
+        return "r"
+    elif name == "r":
+        return "l"
+
+    # re_str = "_[RL][0-9]+_|^[RL][0-9]+_|_[RL][0-9]+$|_[RL]_|^[RL]_|_[RL]$"
+
+    # adding support to conver l and r lowecase side label.
+    re_str = "_[RLrl][0-9]+_|^[RLrl][0-9]+_"
+    re_str = re_str + "|_[RLrl][0-9]+$|_[RLrl]_|^[RLrl]_|_[RLrl]$"
+    re_str = re_str + "|_[RLrl][.]|^[RLrl][.]"
     rePattern = re.compile(re_str)
 
     reMatch = re.search(rePattern, name)
@@ -92,9 +102,12 @@ def convertRLName(name):
         instance = reMatch.group(0)
         if instance.find("R") != -1:
             rep = instance.replace("R", "L")
-        else:
+        elif instance.find("L") != -1:
             rep = instance.replace("L", "R")
-
+        elif instance.find("r") != -1:
+            rep = instance.replace("r", "l")
+        elif instance.find("l") != -1:
+            rep = instance.replace("l", "r")
         name = re.sub(rePattern, rep, name)
 
     return name
