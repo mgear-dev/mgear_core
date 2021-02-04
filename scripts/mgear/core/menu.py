@@ -1,7 +1,9 @@
 from functools import partial
 import mgear
 import mgear.menu
-from mgear.core import skin, pyqt
+from mgear.core import pyqt
+from mgear.core import skin
+from mgear.core import wmap
 import pymel.core as pm
 
 
@@ -21,10 +23,15 @@ def install_skinning_menu():
                                            None,
                                            None)),
         ("-----", None),
-        ("Get Names in gSkin File", partial(skin.getObjsFromSkinFile, None))
+        ("Get Names in gSkin File", partial(skin.getObjsFromSkinFile, None)),
+        ("-----", None),
+        ("Import Deformer Weight Map", partial(wmap.import_weights_selected,
+                                               None)),
+        ("Export Deformer Weight Map", partial(wmap.export_weights_selected,
+                                               None)),
     )
 
-    mgear.menu.install("Skinning", commands)
+    mgear.menu.install("Skin and Weights", commands)
 
 
 def install_utils_menu(m):
