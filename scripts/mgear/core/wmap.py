@@ -150,8 +150,7 @@ def file_browser(mode=1):
     """
     fileFilters = "Deformer Weigth map (*{})".format(FILE_EXT)
     startDir = pm.workspace(q=True, rootDirectory=True)
-    filePath = pm.fileDialog2(dialogStyle=1,
-                              fileMode=mode,
+    filePath = pm.fileDialog2(fileMode=mode,
                               startingDirectory=startDir,
                               fileFilter=fileFilters)
     if filePath:

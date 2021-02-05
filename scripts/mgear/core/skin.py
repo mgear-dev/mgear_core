@@ -172,8 +172,7 @@ def exportSkin(filePath=None, objs=None, *args):
         f3 = ";;All Files (*.*)"
         fileFilters = f2 + f3
         startDir = pm.workspace(q=True, rootDirectory=True)
-        filePath = pm.fileDialog2(dialogStyle=2,
-                                  fileMode=0,
+        filePath = pm.fileDialog2(fileMode=0,
                                   startingDirectory=startDir,
                                   fileFilter=fileFilters)
         if filePath:
@@ -257,8 +256,7 @@ def exportSkinPack(packPath=None, objs=None, use_json=False, *args):
 
     if packPath is None:
         startDir = pm.workspace(q=True, rootDirectory=True)
-        packPath = pm.fileDialog2(dialogStyle=2,
-                                  fileMode=0,
+        packPath = pm.fileDialog2(fileMode=0,
                                   startingDirectory=startDir,
                                   fileFilter='mGear skinPack (*%s)' % PACK_EXT)
         if not packPath:
@@ -381,8 +379,7 @@ def _getObjsFromSkinFile(filePath=None, *args):
         f3 = ";;All Files (*.*)"
         fileFilters = f1 + f2 + f3
         startDir = pm.workspace(q=True, rootDirectory=True)
-        filePath = pm.fileDialog2(dialogStyle=2,
-                                  fileMode=1,
+        filePath = pm.fileDialog2(fileMode=1,
                                   startingDirectory=startDir,
                                   fileFilter=fileFilters)
     if not filePath:
@@ -416,8 +413,7 @@ def importSkin(filePath=None, *args):
         f3 = ";;All Files (*.*)"
         fileFilters = f1 + f2 + f3
         startDir = pm.workspace(q=True, rootDirectory=True)
-        filePath = pm.fileDialog2(dialogStyle=2,
-                                  fileMode=1,
+        filePath = pm.fileDialog2(fileMode=1,
                                   startingDirectory=startDir,
                                   fileFilter=fileFilters)
     if not filePath:
@@ -483,7 +479,7 @@ def importSkin(filePath=None, *args):
                 try:
                     joints = data['weights'].keys()
                     # strip | from longName, or skinCluster command may fail.
-                    skinName = data['skinClsName'].replace('|','')
+                    skinName = data['skinClsName'].replace('|', '')
                     skinCluster = pm.skinCluster(
                         joints, objNode, tsb=True, nw=2, n=skinName)
                 except Exception:
@@ -509,8 +505,7 @@ def importSkin(filePath=None, *args):
 def importSkinPack(filePath=None, *args):
     if not filePath:
         startDir = pm.workspace(q=True, rootDirectory=True)
-        filePath = pm.fileDialog2(dialogStyle=2,
-                                  fileMode=1,
+        filePath = pm.fileDialog2(fileMode=1,
                                   startingDirectory=startDir,
                                   fileFilter='mGear skinPack (*%s)' % PACK_EXT)
     if not filePath:
@@ -556,7 +551,7 @@ def skinCopy(sourceMesh=None, targetMesh=None, *args):
             skinMethod = ss.skinningMethod.get()
             oDef = pm.skinCluster(sourceMesh, query=True, influence=True)
             # strip | from longName, or skinCluster command may fail.
-            skinName = targetMesh.name().replace('|','') + "_SkinCluster"
+            skinName = targetMesh.name().replace('|', '') + "_SkinCluster"
             skinCluster = pm.skinCluster(oDef,
                                          targetMesh,
                                          tsb=True,
