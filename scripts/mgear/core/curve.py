@@ -339,18 +339,20 @@ def collect_curve_shapes(crv, rplStr=["", ""]):
         shapes_names.append(shape.name().replace(rplStr[0], rplStr[1]))
         c_form = shape.form()
         degree = shape.degree()
+        knots = list(shape.getKnots())
         form = c_form.key
         form_id = c_form.index
         pnts = [[cv.x, cv.y, cv.z] for cv in shape.getCVs(space="object")]
         shapesDict[shape.name()] = {"points": pnts,
                                     "degree": degree,
                                     "form": form,
-                                    "form_id": form_id}
+                                    "form_id": form_id,
+                                    "knots": knots}
 
     return shapesDict, shapes_names
 
 
-def collect_selected_curve_data(objs=None):
+def collect_selected_curve_data(objs=None, rplStr=["", ""]):
     """Generate a dictionary descriving the curve data from selected objs
 
     Args:
@@ -359,7 +361,7 @@ def collect_selected_curve_data(objs=None):
     if not objs:
         objs = pm.selected()
 
-    return collect_curve_data(objs)
+    return collect_curve_data(objs, rplStr=rplStr)
 
 
 def collect_curve_data(objs, rplStr=["", ""]):
@@ -503,7 +505,10 @@ def create_curve_from_data_by_name(crv,
         points = shp_dict[sh]["points"]
         form = shp_dict[sh]["form"]
         degree = shp_dict[sh]["degree"]
-        knots = range(len(points) + degree - 1)
+        if "knots" in shp_dict[sh]:
+            knots = shp_dict[sh]["knots"]
+        else:
+            knots = range(len(points) + degree - 1)
         if form != "open":
             close = True
         else:
@@ -627,7 +632,7 @@ def update_curve_from_data(data, rplStr=["", ""]):
             pm.rename(sh, sh.name().replace("ShapeShape", "Shape"))
 
 
-def export_curve(filePath=None, objs=None):
+def export_curve(filePath=None, objs=None, rplStr=["", ""]):
     """Export the curve data to a json file
 
     Args:
@@ -651,7 +656,7 @@ def export_curve(filePath=None, objs=None):
         if not isinstance(filePath, basestring):
             filePath = filePath[0]
 
-    data = collect_selected_curve_data(objs)
+    data = collect_selected_curve_data(objs, rplStr=rplStr)
     data_string = json.dumps(data, indent=4, sort_keys=True)
     f = open(filePath, 'w')
     f.write(data_string)
