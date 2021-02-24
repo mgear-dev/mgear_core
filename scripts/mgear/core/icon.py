@@ -1225,6 +1225,11 @@ def guideBladeIcon(parent=None,
     setcolor(bladeIco, color)
 
     attribute.setNotKeyableAttributes(bladeIco)
+    attribute.unlockAttribute(bladeIco, attributes=["tx", "ty", "tz",
+                                                    "rx", "ry", "rz",
+                                                    "sx", "sy", "sz",
+                                                    "v", "ro"])
+    # bladeIco.scale.set(1, 1, 1)
     # Set the control shapes isHistoricallyInteresting
     for oShape in bladeIco.getShapes():
         oShape.isHistoricallyInteresting.set(False)

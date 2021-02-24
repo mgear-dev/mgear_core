@@ -232,3 +232,25 @@ def timeFunc(func):
                                                       func.func_name)
 
     return wrap
+
+# -----------------------------------------------------------------------------
+# selection Decorators
+# -----------------------------------------------------------------------------
+
+
+def _filter_selection(selection, sel_type="nurbsCurve"):
+    filtered_sel = []
+    for node in selection:
+        if node.getShape().type() == sel_type:
+            filtered_sel.append(node)
+    return filtered_sel
+
+
+def filter_nurbs_curve_selection(func):
+    @wraps(func)
+    def wrap(*args, **kwargs):
+        args = list(args)
+        args[0] = _filter_selection(args[0])
+        return func(*args, **kwargs)
+
+    return wrap

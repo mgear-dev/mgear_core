@@ -1192,3 +1192,10 @@ def add_mirror_config_channels(ctl, conf=[0, 0, 0, 0, 0, 0, 0, 0, 0]):
                  conf[8],
                  keyable=False,
                  niceName="Invert Mirror SZ")
+
+
+def toggle_bool_attr(attr):
+    if attr.get():
+        attr.set(False)
+    else:
+        attr.set(True)

@@ -3,9 +3,14 @@
 import math
 
 from pymel import util
-from pymel.core import datatypes, nodetypes
+import pymel.core as pm
+from pymel.core import datatypes
+from pymel.core import nodetypes
 
 from mgear.core import vector
+
+import maya.OpenMaya as om
+import maya.OpenMayaUI as omui
 
 #############################################
 # TRANSFORM
@@ -80,6 +85,10 @@ def getTransformLookingAt(pos, lookat, normal, axis="xy", negate=False):
         X = a
         Z = b
         Y = -c
+    elif axis == "x-z":
+        X = a
+        Z = -b
+        Y = c
     elif axis == "yx":
         Y = a
         X = b
@@ -663,3 +672,167 @@ def getInterpolateTransformMatrix(t1, t2, blend=.5):
     result.setScale([vs.x, vs.y, vs.z], space="world")
 
     return result
+
+
+def interpolate_rotation(obj, targets, blends):
+    rot = [0, 0, 0]
+    for t, b in zip(targets, blends):
+        rot[0] += t.rx.get() * b
+        rot[1] += t.ry.get() * b
+        rot[2] += t.rz.get() * b
+
+    obj.rotate.set(rot)
+
+
+def interpolate_scale(obj, targets, blends):
+    rot = [0, 0, 0]
+    for t, b in zip(targets, blends):
+        rot[0] += t.sx.get() * b
+        rot[1] += t.sy.get() * b
+        rot[2] += t.sz.get() * b
+
+    obj.scale.set(rot)
+
+
+def getDistance2(obj0, obj1):
+    """Get the distance between 2 objects.
+
+    Arguments:
+        obj0 (dagNode): Object A
+        obj1 (dagNode): Object B
+
+    Returns:
+        float: Distance length
+
+    """
+    v0 = obj0.getTranslation(space="world")
+    v1 = obj1.getTranslation(space="world")
+
+    v = v1 - v0
+
+    return v.length()
+
+
+# TODO: Maybe better just return a list of the closes ordered trasform?
+def get_closes_transform(target_transform, source_transforms):
+    """Summary
+
+    Args:
+        target_transform (dagNode): target transform
+        source_transforms ([dagNode]): objects to check distance
+
+    Returns:
+        list: ordered transform list
+    """
+    distances = {}
+    for t in source_transforms:
+        dist = getDistance2(t, target_transform)
+        distances[t.name()] = [t, dist]
+    sorted_dist = sorted(distances.items(), key=lambda kv: kv[1][1])
+
+    return sorted_dist
+
+
+def getClosestPolygonFromTransform(geo, loc):
+    """Get closest polygon from transform
+
+    Arguments:
+        geo (dagNode): Mesh object
+        loc (matrix): location transform
+
+    Returns:
+        Closest Polygon
+
+    """
+    if isinstance(loc, pm.nodetypes.Transform):
+        pos = loc.getTranslation(space='world')
+    else:
+        pos = datatypes.Vector(loc[0], loc[1], loc[2])
+
+    nodeDagPath = om.MObject()
+    try:
+        selectionList = om.MSelectionList()
+        selectionList.add(geo.name())
+        nodeDagPath = om.MDagPath()
+        selectionList.getDagPath(0, nodeDagPath)
+    except Exception as e:
+        raise RuntimeError("MDagPath failed "
+                           "on {}. \n {}".format(geo.name(), e))
+
+    mfnMesh = om.MFnMesh(nodeDagPath)
+
+    pointA = om.MPoint(pos.x, pos.y, pos.z)
+    pointB = om.MPoint()
+    space = om.MSpace.kWorld
+
+    util = om.MScriptUtil()
+    util.createFromInt(0)
+    idPointer = util.asIntPtr()
+
+    mfnMesh.getClosestPoint(pointA, pointB, space, idPointer)
+    idx = om.MScriptUtil(idPointer).asInt()
+
+    return geo.f[idx], pos
+
+
+def get_orientation_from_polygon(face):
+    """Summary
+
+    Args:
+        face (TYPE): Description
+        loc (TYPE): Description
+
+    Returns:
+        TYPE: Description
+    """
+    normal = face.getNormal()
+    v = datatypes.Vector((1, 0, 0))
+    q = v.rotateTo(normal)
+    rotation = q.asEulerRotation()
+    deg = [pm.util.degrees(x) for x in rotation]
+    return deg
+
+
+def get_raycast_translation_from_mouse_click(mesh, mpx, mpy):
+    """get the raycasted translation of the mouse position
+
+    Args:
+        mesh (str): mesh name
+        mpx (int): mouse position x
+        mpy (int): mouse position x
+
+    Returns:
+        list: XYZ position
+    """
+    pos = om.MPoint()
+    dir = om.MVector()
+    hitpoint = om.MFloatPoint()
+    omui.M3dView().active3dView().viewToWorld(int(mpx), int(mpy), pos, dir)
+    pos2 = om.MFloatPoint(pos.x, pos.y, pos.z)
+    selectionList = om.MSelectionList()
+    selectionList.add(mesh)
+    dagPath = om.MDagPath()
+    selectionList.getDagPath(0, dagPath)
+    fnMesh = om.MFnMesh(dagPath)
+    intersection = fnMesh.closestIntersection(
+        om.MFloatPoint(pos2),
+        om.MFloatVector(dir),
+        None,
+        None,
+        False,
+        om.MSpace.kWorld,
+        99999,
+        False,
+        None,
+        hitpoint,
+        None,
+        None,
+        None,
+        None,
+        None)
+    if intersection:
+        x = hitpoint.x
+        y = hitpoint.y
+        z = hitpoint.z
+
+        return [x, y, z]
