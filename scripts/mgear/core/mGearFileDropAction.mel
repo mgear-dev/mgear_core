@@ -1,0 +1,11 @@
+//  Override the default performFileDropAction with mGears, with user approval
+//  Use: Enable from the mGear > Utilities > Enable mGear file drop
+//  Shout out Randall Hess
+
+global proc int
+performFileDropAction (string $theFile)
+{
+    string $pycmd = "from mgear.core import dagmenu;dagmenu.mgear_file_drop_action(\"" + $theFile + "\")";
+    int $result = python($pycmd);
+    return($result);
+}
