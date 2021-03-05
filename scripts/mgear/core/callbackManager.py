@@ -102,7 +102,6 @@ def removeCB(callback_identifier, callback_info=RECORDED_CALLBACKS):
     callback_id = callback_info.pop(callback_identifier, callback_identifier)
     try:
         om.MMessage.removeCallback(callback_id)
-        print "{} callback removed".format(callback_identifier)
     except (RuntimeError, ValueError):
         pass
 
