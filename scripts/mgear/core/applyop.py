@@ -249,6 +249,39 @@ def aimCns(obj,
 #############################################
 
 
+def gear_raycast(in_mesh,
+                 ray_source,
+                 ray_direction,
+                 out_obj=None,
+                 connect_srt='t'):
+    """Create and connect mraycast  node
+
+    Args:
+        in_mesh (shape): Mesh shape
+        ray_source (transform): ray source
+        ray_direction (transform): ray direction
+        out_obj (transform, optional): Object to apply the raycast contact
+        connect_srt (str, optional): scale rotation traanslation flag
+
+    Returns:
+        PyNode: The raycast node
+    """
+    node = pm.createNode("mgear_rayCastPosition")
+    pm.connectAttr(
+        ray_source + ".worldMatrix[0]", node + ".raySource", force=True)
+    pm.connectAttr(
+        ray_direction + ".worldMatrix[0]", node + ".rayDirection", force=True)
+    pm.connectAttr(
+        in_mesh + ".outMesh", node + ".meshInput", force=True)
+
+    if out_obj:
+        gear_matrix_cns(node.output,
+                        out_obj=out_obj,
+                        connect_srt=connect_srt)
+
+    return node
+
+
 def gear_matrix_cns(in_obj,
                     out_obj=None,
                     connect_srt='srt',
@@ -258,7 +291,7 @@ def gear_matrix_cns(in_obj,
     """Create and connect matrix constraint node
 
     Args:
-        in_obj (transform): the driver object
+        in_obj (transform): the driver object or matrix
         out_obj (transform, optional): the driven object
         connect_srt (str, optional): scale rotation traanslation flag
         rot_off (list, optional): rotation offset for XYZ
@@ -269,8 +302,12 @@ def gear_matrix_cns(in_obj,
         PyNode: The matrix constraint node
     """
     node = pm.createNode("mgear_matrixConstraint")
-    pm.connectAttr(
-        in_obj + ".worldMatrix[0]", node + ".driverMatrix", force=True)
+    if isinstance(in_obj, pm.PyNode) and in_obj.type() == "matrix":
+        pm.connectAttr(
+            in_obj, node + ".driverMatrix", force=True)
+    else:
+        pm.connectAttr(
+            in_obj + ".worldMatrix[0]", node + ".driverMatrix", force=True)
 
     # setting rot and scl config
     node.driverRotationOffsetX.set(rot_off[0])
