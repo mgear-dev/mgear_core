@@ -255,6 +255,37 @@ def get_instance(parent, gui_class):
     return None
 
 
+def get_top_level_widgets(class_name=None, object_name=None):
+    """
+    Get existing widgets for a given class name
+
+    Args:
+        class_name (str): Name of class to search top level widgets for
+        object_name (str): Qt object name
+
+    Returns:
+        List of QWidgets
+    """
+    matches = []
+
+    # Find top level widgets matching class name
+    for widget in QtWidgets.QApplication.topLevelWidgets():
+        try:
+            # Matching class
+            if class_name and widget.metaObject().className() == class_name:
+                matches.append(widget)
+            # Matching object name
+            elif object_name and widget.objectName() == object_name:
+                matches.append(widget)
+        except AttributeError:
+            continue
+        # Print unhandled to the shell
+        except Exception as e:
+            print(e)
+
+    return matches
+
+
 def get_icon_path(icon_name=None):
     """ Gets the directory path to the icon
     """
