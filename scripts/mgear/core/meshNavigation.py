@@ -208,6 +208,36 @@ def edgeRangeInLoopFromMid(edgeList, midPos, endA, endB):
     return loopRange
 
 
+def edgeLoopBetweenVertices(startPos, endPos):
+    """ Computes edge loop between two vertices.
+
+    Arguments:
+        startPos (vertex): Start of edge loop
+        endPos (vertex): End of edge loop
+
+    Returns:
+        Edge loop, if one exists. Otherwise None.
+
+    """
+
+    oldSelection = pm.selected()
+    mesh = startPos.node()
+    edgeLoops = []
+    for startEdge in startPos.connectedEdges():
+        for endEdge in endPos.connectedEdges():
+            testEdgeLoop = pm.polySelect(mesh,
+                                         edgeLoopPath=[startEdge.index(),
+                                                       endEdge.index()])
+            if testEdgeLoop:
+                edgeLoops.append(pm.selected())
+    pm.select(oldSelection, r=1)
+    if edgeLoops:
+        edgeLoops.sort(key = len)
+        return edgeLoops[0]
+    return None
+
+
+
 #################################################
 # Bounding box info
 #################################################
