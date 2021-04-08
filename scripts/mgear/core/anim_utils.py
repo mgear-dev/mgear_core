@@ -331,8 +331,8 @@ def get_ik_fk_controls_by_role(uiHost, attr_ctl_cnx):
                     ik_controls["pole_vector"] = c.stripNamespace()
                 elif role == "ik":
                     ik_controls["ik_control"] = c.stripNamespace()
-                elif role == "ik":
-                    ik_controls["ikRot"] = c.stripNamespace()
+                elif role == "ikRot":
+                    ik_controls["ik_rot"] = c.stripNamespace()
 
     fk_controls = sorted(fk_controls)
     return ik_controls, fk_controls
