@@ -5,6 +5,7 @@ from mgear.core import pyqt
 from mgear.core import skin
 from mgear.core import wmap
 import pymel.core as pm
+from pymel import versions
 
 
 def install_skinning_menu():
@@ -37,6 +38,7 @@ def install_skinning_menu():
 def install_utils_menu(m):
     """Install core utils submenu
     """
-    pm.setParent(m, menu=True)
-    pm.menuItem(divider=True)
-    pm.menuItem(label="Compile PyQt ui", command=pyqt.ui2py)
+    if versions.current() < 20220000:
+        pm.setParent(m, menu=True)
+        pm.menuItem(divider=True)
+        pm.menuItem(label="Compile PyQt ui", command=pyqt.ui2py)

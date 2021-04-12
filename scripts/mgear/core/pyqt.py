@@ -7,6 +7,7 @@ import os
 import traceback
 import maya.OpenMayaUI as omui
 import pymel.core as pm
+from pymel import versions
 
 from mgear.vendor.Qt import QtWidgets
 from mgear.vendor.Qt import QtCompat
@@ -32,7 +33,8 @@ def _qt_import(binding, shi=False, cui=False):
         from PySide2 import QtGui, QtCore, QtWidgets
         import shiboken2 as shiboken
         from shiboken2 import wrapInstance
-        from pyside2uic import compileUi
+        if versions.current() < 20220000:
+            from pyside2uic import compileUi
 
     elif binding == "PySide":
         from PySide import QtGui, QtCore
@@ -85,38 +87,39 @@ def qt_import(shi=False, cui=False):
     raise _qt_import("ThisBindingSurelyDoesNotExist", False, False)
 
 
-compileUi = qt_import(shi=True, cui=True)[-1]
-
 #############################################
 # helper Maya pyQt functions
 #############################################
 
+if versions.current() < 20220000:
+    compileUi = qt_import(shi=True, cui=True)[-1]
 
-def ui2py(filePath=None, *args):
-    """Convert qtDesigner .ui files to .py"""
+    def ui2py(filePath=None, *args):
+        """Convert qtDesigner .ui files to .py"""
 
-    if not filePath:
-        startDir = pm.workspace(q=True, rootDirectory=True)
-        filePath = pm.fileDialog2(dialogStyle=2,
-                                  fileMode=1,
-                                  startingDirectory=startDir,
-                                  fileFilter='PyQt Designer (*%s)' % UI_EXT,
-                                  okc="Compile to .py")
+        if not filePath:
+            startDir = pm.workspace(q=True, rootDirectory=True)
+            filePath = pm.fileDialog2(
+                dialogStyle=2,
+                fileMode=1,
+                startingDirectory=startDir,
+                fileFilter='PyQt Designer (*%s)' % UI_EXT,
+                okc="Compile to .py")
+            if not filePath:
+                return False
+            filePath = filePath[0]
         if not filePath:
             return False
-        filePath = filePath[0]
-    if not filePath:
-        return False
 
-    if not filePath.endswith(UI_EXT):
-        filePath += UI_EXT
-    compiledFilePath = filePath[:-2] + "py"
-    pyfile = open(compiledFilePath, 'w')
-    compileUi(filePath, pyfile, False, 4, False)
-    pyfile.close()
+        if not filePath.endswith(UI_EXT):
+            filePath += UI_EXT
+        compiledFilePath = filePath[:-2] + "py"
+        pyfile = open(compiledFilePath, 'w')
+        compileUi(filePath, pyfile, False, 4, False)
+        pyfile.close()
 
-    info = "PyQt Designer file compiled to .py in: "
-    pm.displayInfo(info + compiledFilePath)
+        info = "PyQt Designer file compiled to .py in: "
+        pm.displayInfo(info + compiledFilePath)
 
 
 def maya_main_window():
