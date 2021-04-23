@@ -197,7 +197,7 @@ def deleteInstances(dialog, checkinstance):
     for obj in mayaMainWindow.children():
         if isinstance(obj, checkinstance):
             if obj.widget().objectName() == dialog.toolName:
-                print 'Deleting instance {0}'.format(obj)
+                print('Deleting instance {0}'.format(obj))
                 mayaMainWindow.removeDockWidget(obj)
                 obj.setParent(None)
                 obj.deleteLater()

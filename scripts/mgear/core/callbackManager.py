@@ -155,7 +155,7 @@ def testFunc(*args):
     Args:
         *args: things that will printed
     """
-    print "TESTFUNC", args
+    print("TESTFUNC", args)
 
 
 # api convenience -------------------------------------------------------------
@@ -261,7 +261,7 @@ def userTimeChangedCB(callback_name, func):
 
 @registerSessionCB
 def sampleCallback(callback_name, func):
-    """argument order is important. Callback_name and func must always be firts
+    """argument order is important. Callback_name and func must always be first
     must always return the mayaID to the callback
     Args:
         callback_name (str): name you want to assign cb
@@ -270,7 +270,7 @@ def sampleCallback(callback_name, func):
     Returns:
         long: maya id to created callback
     """
-    callback_id = 2349823749l
+    callback_id = 2349823749
     return callback_id
 
 
@@ -368,7 +368,7 @@ class CallbackManager(object):
     def removeAllManagedCB(self):
         """remove all the callbacks created my this manager
         """
-        for callback_id in self.MANAGER_CALLBACKS.keys():
+        for callback_id in list(self.MANAGER_CALLBACKS.keys()):
             removeCB(callback_id, callback_info=self.MANAGER_CALLBACKS)
             removeCB(callback_id)
 
@@ -422,10 +422,10 @@ class CallbackManager(object):
             mayaID = debugInfo[1]
             func_name = args[0].__name__
             if self.debug:
-                print "{} >> {} >> {}({})".format(callback_id,
+                print("{} >> {} >> {}({})".format(callback_id,
                                                   mayaID,
                                                   func_name,
-                                                  *args[1:])
+                                                  *args[1:]))
         except Exception:
             pass
         finally:
