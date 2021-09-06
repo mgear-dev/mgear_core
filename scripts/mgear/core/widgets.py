@@ -1,8 +1,8 @@
 """mGear Qt custom widgets"""
 
-from mgear.vendor.Qt import QtCore, QtWidgets, QtGui
+from mgear.vendor.Qt import QtCore, QtWidgets, QtGui, QtCompat
 import maya.OpenMaya as api
-
+import os, sys
 
 #################################################
 # CUSTOM WIDGETS
@@ -242,3 +242,58 @@ class DragQListView(QtWidgets.QListView):
 
     def doAction(self, sel):
         self.theAction(sel)
+
+
+class UIFileDialog(QtWidgets.QDialog):
+    """
+    Automatically loads the ui file from the directory the executing python module is in.  Defaults to settingsUI.ui
+    but can be set with set_ui_file("ui_file_name.ui")
+
+
+    Example Usage : 
+
+    class settingsTab(widgets.UIFileDialog):
+        def __init__(self, parent=None):
+            super(settingsTab, self).__init__(parent)
+            self.set_ui_file()
+
+    """
+
+    def __getattribute__(self, attr):
+        """
+        Always try to get properties from the internal ui file after the parent object
+        Now this basically gets over the error  (Internal c++ Object Already Deleted) when you don't save the
+        objects on the widget stack by adding them to a layout or setting their parent.
+
+        so : QtCompat.loadUi(path + "/{}".format(ui_file), self) works but causes the error Internal c++ Object Already Deleted
+        but : self.ui = QtCompat.loadUi(path + "/{}".format(ui_file)) is stable but incompatible with the way
+        widgets are being used from mgear as they are accessed directly on the parent object
+        """
+        # return any functions straight away
+        try:
+            return object.__getattribute__(self, attr)
+        except Exception:
+            try:
+                ui = object.__getattribute__(self, "ui")
+                if ui:
+                    try:
+                        return object.__getattribute__(ui, attr)
+                    except Exception as e:
+                        return object.__getattribute__(self, attr)
+                else:
+                    return object.__getattribute__(self, attr)
+            except Exception as e:
+                return object.__getattribute__(self, attr)
+
+    def set_ui_file(self, ui_file=None):
+        if ui_file is None:
+            ui_file = "settingsUI.ui"
+        path = os.path.dirname(sys.modules[self.__module__].__file__)
+        self.ui = QtCompat.loadUi(path + "/{}".format(ui_file))
+        self.layout().addWidget(self.ui)
+
+    def __init__(self, parent=None):
+        super(UIFileDialog, self).__init__(parent)
+        self.ui = None
+        self.setLayout(QtWidgets.QVBoxLayout())
+        self.layout().setContentsMargins(0, 0, 0, 0)

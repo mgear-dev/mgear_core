@@ -33,6 +33,41 @@ def curvecns_op(crv, inputs=[]):
     return node
 
 
+def curve_skin_cns_op(crv, drivers=None):
+    """
+    Arguments:
+        name (str): Name of the curve shape.
+        drivers (list of controls): List of driving transform. At less 2 control should be in
+            the list.
+
+    Returns:
+        list: [nt.Joint, ], skinCluster
+    """
+    import curve
+    import primitive
+    import transform
+    if drivers is None:
+        drivers = []
+
+    joints = []
+
+    for i, node in enumerate(drivers):
+        t = node.getTranslation(space="world")
+        param = curve.getCurveParamAtPosition(crv, t)[0]
+        p = crv.getPointAtParam(param)
+        m = transform.setMatrixPosition(pm.dt.Matrix(), p)
+        joints.append(primitive.addJoint(node, "{}_driver".format(node), m, vis=False))
+
+    skinName = crv.name().replace('|', '') + "_SkinCluster"
+    skinCluster = pm.skinCluster(joints,
+                                 crv,
+                                 tsb=True,
+                                 nw=1,
+                                 n=skinName)
+
+    return joints, skinCluster
+
+
 def splineIK(name, chn, parent=None, cParent=None, curve=None):
     """Apply a splineIK solver to a chain.
 
@@ -247,6 +282,39 @@ def aimCns(obj,
 #############################################
 # CUSTOM NODES
 #############################################
+
+
+def gear_raycast(in_mesh,
+                 ray_source,
+                 ray_direction,
+                 out_obj=None,
+                 connect_srt='t'):
+    """Create and connect mraycast  node
+
+    Args:
+        in_mesh (shape): Mesh shape
+        ray_source (transform): ray source
+        ray_direction (transform): ray direction
+        out_obj (transform, optional): Object to apply the raycast contact
+        connect_srt (str, optional): scale rotation traanslation flag
+
+    Returns:
+        PyNode: The raycast node
+    """
+    node = pm.createNode("mgear_rayCastPosition")
+    pm.connectAttr(
+        ray_source + ".worldMatrix[0]", node + ".raySource", force=True)
+    pm.connectAttr(
+        ray_direction + ".worldMatrix[0]", node + ".rayDirection", force=True)
+    pm.connectAttr(
+        in_mesh + ".outMesh", node + ".meshInput", force=True)
+
+    if out_obj:
+        gear_matrix_cns(node.output,
+                        out_obj=out_obj,
+                        connect_srt=connect_srt)
+
+    return node
 
 
 def gear_matrix_cns(in_obj,

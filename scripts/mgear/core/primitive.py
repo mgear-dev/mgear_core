@@ -226,6 +226,49 @@ def add2DChain2(parent, name, positions, normal, negate=False, vis=True):
 
     return chain
 
+def add2DChainNonPlanar(parent, name, positions, normal, negate=False, vis=True):
+
+    """Create a 2D joint chain. Like Softimage 2D chain.
+
+    Arguments:
+        parent (dagNode): The parent for the chain.
+        name (str): The node name.
+        positions(list of vectors): the positons to define the chain.
+        normal (vector): The normal vector to define the direction of
+            the chain.
+        negate (bool): If True will negate the direction of the chain
+
+    Returns;
+        list of dagNodes: The list containg all the joints of the chain
+
+    >>> self.rollRef = pri.add2DChain(
+        self.root,
+        self.getName("rollChain"),
+        self.guide.apos[:2],
+        self.normal,
+        self.negate)
+
+    """
+    if "%s" not in name:
+        name += "%s"
+
+    transforms = transform.getChainTransform(positions, normal, negate)
+    t = transform.setMatrixPosition(transforms[-1], positions[-1])
+    transforms.append(t)
+
+    chain = []
+    for i, t in enumerate(transforms):
+        node = addJoint(parent, name % i, t, vis)
+        chain.append(node)
+        parent = node
+
+    # moving rotation value to joint orient
+    for i, jnt in enumerate(chain):
+        if i == 0:
+            pm.makeIdentity(jnt, apply=1, t=0, r=1, s=0, n=0, pn=1)
+        jnt.setAttr("radius", 1.5)
+
+    return chain
 
 def add2DChain(parent, name, positions, normal, negate=False, vis=True):
     """Create a 2D joint chain. Like Softimage 2D chain.
