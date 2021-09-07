@@ -5,18 +5,48 @@
 #############################################
 # GLOBAL
 #############################################
+from functools import wraps
 import pymel.core as pm
 from pymel.core import datatypes
 import json
+import maya.mel as mel
 
 import maya.OpenMaya as om
 
 from mgear.core import applyop
+from mgear.core import utils
+from mgear.core import transform
+reload(applyop)
 
 #############################################
 # CURVE
 #############################################
 
+def addCnsCurve2(parent, name, points, drivers, degree):
+    # rebuild list to avoid input list modification
+    # points = points[:]
+    drivers = drivers[:]
+    if degree == 3:
+        if len(drivers) == 2:
+            # points.insert(0, points[0])
+            # points.append(points[-1])
+            drivers.insert(0, drivers[0])
+            drivers.append(drivers[-1])
+        elif len(drivers) == 3:
+            # points.append(points[-1])
+            drivers.append(drivers[-1])
+
+    input_node = addCurve(parent, name, points, False, 1)
+
+    if degree == 3:
+        node = pm.fitBspline(input_node, ch=0, tol=0.01)[0]
+        node.setParent(parent)
+        pm.delete(input_node)
+        node.rename(name)
+        pm.makeIdentity(node, t=1, r=0)
+    else:
+        node = input_node
+    return node
 
 def addCnsCurve(parent, name, centers, degree=1):
     """Create a curve attached to given centers. One point per center
@@ -292,7 +322,7 @@ def get_color(node):
 
         return color
 
-
+@utils.one_undo
 def set_color(node, color):
     """Set the color in the Icons.
 
@@ -339,18 +369,20 @@ def collect_curve_shapes(crv, rplStr=["", ""]):
         shapes_names.append(shape.name().replace(rplStr[0], rplStr[1]))
         c_form = shape.form()
         degree = shape.degree()
+        knots = list(shape.getKnots())
         form = c_form.key
         form_id = c_form.index
         pnts = [[cv.x, cv.y, cv.z] for cv in shape.getCVs(space="object")]
         shapesDict[shape.name()] = {"points": pnts,
                                     "degree": degree,
                                     "form": form,
-                                    "form_id": form_id}
+                                    "form_id": form_id,
+                                    "knots": knots}
 
     return shapesDict, shapes_names
 
 
-def collect_selected_curve_data(objs=None):
+def collect_selected_curve_data(objs=None, rplStr=["", ""]):
     """Generate a dictionary descriving the curve data from selected objs
 
     Args:
@@ -359,7 +391,7 @@ def collect_selected_curve_data(objs=None):
     if not objs:
         objs = pm.selected()
 
-    return collect_curve_data(objs)
+    return collect_curve_data(objs, rplStr=rplStr)
 
 
 def collect_curve_data(objs, rplStr=["", ""]):
@@ -482,7 +514,6 @@ def create_curve_from_data_by_name(crv,
             parent, if  several objects with the same name
     """
     crv_dict = data[crv]
-
     crv_transform = crv_dict["crv_transform"]
     shp_dict = crv_dict["shapes"]
     color = crv_dict["crv_color"]
@@ -503,7 +534,10 @@ def create_curve_from_data_by_name(crv,
         points = shp_dict[sh]["points"]
         form = shp_dict[sh]["form"]
         degree = shp_dict[sh]["degree"]
-        knots = range(len(points) + degree - 1)
+        if "knots" in shp_dict[sh]:
+            knots = shp_dict[sh]["knots"]
+        else:
+            knots = range(len(points) + degree - 1)
         if form != "open":
             close = True
         else:
@@ -627,7 +661,7 @@ def update_curve_from_data(data, rplStr=["", ""]):
             pm.rename(sh, sh.name().replace("ShapeShape", "Shape"))
 
 
-def export_curve(filePath=None, objs=None):
+def export_curve(filePath=None, objs=None, rplStr=["", ""]):
     """Export the curve data to a json file
 
     Args:
@@ -651,7 +685,7 @@ def export_curve(filePath=None, objs=None):
         if not isinstance(filePath, basestring):
             filePath = filePath[0]
 
-    data = collect_selected_curve_data(objs)
+    data = collect_selected_curve_data(objs, rplStr=rplStr)
     data_string = json.dumps(data, indent=4, sort_keys=True)
     f = open(filePath, 'w')
     f.write(data_string)
@@ -690,3 +724,219 @@ def import_curve(filePath=None,
 def update_curve_from_file(filePath=None, rplStr=["", ""]):
     # update a curve data from json file
     update_curve_from_data(_curve_from_file(filePath), rplStr)
+
+
+# -----------------------------------------------------------------------------
+# Curve Decorators
+# -----------------------------------------------------------------------------
+
+def keep_lock_length_state(func):
+    @wraps(func)
+    def wrap(*args, **kwargs):
+        crvs = args[0]
+        state = {}
+        for crv in crvs:
+            if crv.getShape().hasAttr("lockLength"):
+                attr = crv.getShape().lockLength
+                state[crv.name()] = attr.get()
+                attr.set(False)
+            else:
+                state[crv.name()] = None
+
+        try:
+            return func(*args, **kwargs)
+
+        except Exception as e:
+            raise e
+
+        finally:
+            for crv in crvs:
+                current_state = state[crv.name()]
+                if current_state:
+                    crv.getShape().lockLength.set(current_state)
+
+    return wrap
+
+
+def keep_point_0_cnx_state(func):
+    @wraps(func)
+    def wrap(*args, **kwargs):
+        crvs = args[0]
+        cnx_dict = {}
+        for crv in crvs:
+            cnxs = crv.controlPoints[0].listConnections(p=True)
+            if cnxs:
+                cnx_dict[crv.name()] = cnxs[0]
+                pm.disconnectAttr(crv.controlPoints[0])
+            else:
+                cnx_dict[crv.name()] = None
+
+        try:
+            return func(*args, **kwargs)
+
+        except Exception as e:
+            raise e
+
+        finally:
+            for crv in crvs:
+                src_attr = cnx_dict[crv.name()]
+                if src_attr:
+                    pm.connectAttr(src_attr, crv.controlPoints[0])
+
+    return wrap
+
+# -----------------------------------------------------------------------------
+
+# add lock lenght attr
+
+
+def lock_length(crv, lock=True):
+    crv_shape = crv.getShape()
+    if not crv_shape.hasAttr("lockLength"):
+        crv_shape.addAttr("lockLength", at=bool)
+    crv_shape.lockLength.set(lock)
+    return crv_shape.lockLength
+
+
+# average curve shape
+def average_curve(crv,
+                  shapes,
+                  average=2,
+                  avg_shape=False,
+                  avg_scl=False,
+                  avg_rot=False):
+    """Average the shape, rotation and scale of the curve
+    bettwen n number of curves
+
+    Args:
+        crv (dagNode): curve to average shape
+        shapes ([dagNode]]): imput curves to average the shapes
+        average (int, optional): Number of curves to use on the average
+        avg_shape (bool, optional): if True will interpolate curve shape
+        avg_scl (bool, optional): if True will interpolate curve scale
+        avg_rot (bool, optional): if True will interpolate curve rotation
+
+    """
+    if shapes and len(shapes) >= average:
+        shapes_by_distance = transform.get_closes_transform(crv, shapes)
+        bst = []
+        bst_filtered = []
+        bst_temp = []
+        weights = []
+        blends = []
+        # calculate the average value based on distance
+        total_val = 0.0
+        for x in range(average):
+            total_val += shapes_by_distance[x][1][1]
+        # setup the blendshape
+        for x in range(average):
+            blend = 1 - (shapes_by_distance[x][1][1] / total_val)
+            bst.append(shapes_by_distance[x][1][0])
+            weights.append((x, blend))
+            blends.append(blend)
+
+        if avg_rot:
+            transform.interpolate_rotation(crv, bst, blends)
+        if avg_scl:
+            transform.interpolate_scale(crv, bst, blends)
+        if avg_shape:
+            # check the number of of points and rebuild to match number in
+            # order of make the blendshape
+            crv_len = len(crv.getCVs())
+            for c in bst:
+                if len(c.getCVs()) == crv_len:
+                    bst_filtered.append(c)
+                else:
+                    t_c = pm.duplicate(c)[0]
+                    bst_temp.append(t_c)
+            if bst_temp:
+                rebuild_curve(bst_temp, crv_len - 2)
+                bst_filtered = bst_filtered + bst_temp
+            # the blendshape is done with curves of the same number
+            pm.blendShape(bst_filtered,
+                          crv,
+                          name="_".join([crv.name(), "blendShape"]),
+                          foc=True,
+                          w=weights)
+            pm.delete(crv, ch=True)
+            pm.delete(bst_temp)
+
+            # need to lock the first point after delete history
+            lock_first_point(crv)
+    else:
+        pm.displayWarning("Can average the curve with more"
+                          " curves than exist")
+
+
+# rebuild curve
+@utils.one_undo
+@utils.filter_nurbs_curve_selection
+def rebuild_curve(crvs, spans):
+    for crv in crvs:
+        name = crv.name()
+        pm.rebuildCurve(crv,
+                        ch=False,
+                        rpo=True,
+                        rt=0,
+                        end=1,
+                        kr=0,
+                        kcp=0,
+                        kep=1,
+                        kt=0,
+                        s=spans,
+                        d=2,
+                        tol=0.01,
+                        name=name)
+
+
+# smooth curve.
+# Lockt lenght needs to be off for smooth correctly
+@utils.one_undo
+@keep_lock_length_state
+@keep_point_0_cnx_state
+def smooth_curve(crvs, smooth_factor=1):
+
+    mel.eval("modifySelectedCurves smooth {} 0;".format(str(smooth_factor)))
+
+# straight curve.
+# Need to unlock/diconect first point to work.
+# also no length lock
+
+
+@utils.one_undo
+@keep_lock_length_state
+@keep_point_0_cnx_state
+def straighten_curve(crvs, straighteness=.1, keep_lenght=1):
+
+    mel.eval(
+        "modifySelectedCurves straighten {0} {1};".format(str(straighteness)),
+        str(keep_lenght))
+
+# Curl curve.
+# Need to unlock/diconect first point to work.
+# also no length lock
+
+
+def curl_curve(crvs, amount=.3, frequency=10):
+
+    mel.eval(
+        "modifySelectedCurves curl {0} {1};".format(str(amount)),
+        str(frequency))
+
+
+# ========================================
+
+
+def set_thickness(crv, thickness=-1):
+    crv.getShape().lineWidth.set(thickness)
+
+
+def lock_first_point(crv):
+    # lock first point in the curve
+    mul_mtrx = pm.createNode("multMatrix")
+    dm_node = pm.createNode("decomposeMatrix")
+    pm.connectAttr(crv.worldMatrix[0], mul_mtrx.matrixIn[0])
+    pm.connectAttr(crv.worldInverseMatrix[0], mul_mtrx.matrixIn[1])
+    pm.connectAttr(mul_mtrx.matrixSum, dm_node.inputMatrix)
+    pm.connectAttr(dm_node.outputTranslate,
+                   crv.getShape().controlPoints[0])
